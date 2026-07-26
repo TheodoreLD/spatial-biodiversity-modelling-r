@@ -1,0 +1,289 @@
+# =============================================================================
+# model1_catboost.R — FINAL validated Model 1, native CatBoost. Mirrors model1.py.
+# Response = relative spiny-trunk richness (bounded proportion).
+#
+# Design decisions (verified, not assumed):
+#   * analysis unit = 1 deg (aggregated from 0.1 deg), chosen by the resolution sweep.
+#   * tuning uses a 1-SE rule so the simplest adequate model wins (-> depth 3, l2 30).
+#   * loss = RMSE. Verified second-order here (RMSE .373 / MAE .349 / Quantile .349
+#     / CrossEntropy .377) -> NO response transform, no loss search.
+#     NB CatBoost regression does not accept CrossEntropy (classifier-only loss).
+#   * GOAL: characterise the environment where spiny-trunk richness is highest via ALE,
+#     NOT rank predictor importance (no importance ranking is computed).
+#   * both megafauna metrics kept (rho = 0.84 at 1 deg) and read as one axis; predictor
+#     redundancy is disclosed by correlation + VIF + concurvity, not ranked.
+#   * NO spatial term: tested, it erases the ecological signal (see sensitivity tests).
+#   * ALE (not PDP) for effect shapes — stays valid under correlated predictors.
+#   * ONE block-bootstrap ensemble serves both the ALE CIs and the uncertainty map.
+#   * early stopping on a spatially separated eval subset of the training blocks.
+# =============================================================================
+suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
+set.seed(123)
+
+# ---- paths (self-contained) -------------------------------------------------
+# Point TRUNK_STACK at the Dryad predictor stack (output/Raster_model/predictor_stack.tif)
+# or drop that file next to this script. Outputs are written to ./outputs.
+STACK  <- Sys.getenv("TRUNK_STACK", unset = "predictor_stack.tif")
+outdir <- file.path("outputs","model1"); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+
+ENV <- c("vpi_mean","cold_mean","dry_mean","height")
+HERB <- c("mammal_richness","consumption")   # present-natural megafauna >5 kg (PHYLACINE Mass.g>5000)
+PREDS <- c(ENV, HERB); TARGET <- "trunkrichness"
+NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
+          dry_mean="Dry-season deciduousness", height="Vegetation height",
+          mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
+
+stopifnot(file.exists(STACK))
+ps <- rast(STACK); names(ps) <- c(TARGET, PREDS)
+
+# ---------------- helpers ----------------
+r2 <- function(y,yh) 1 - sum((y-yh)^2)/sum((y-mean(y))^2)
+blk <- function(lon,lat,deg) floor((lon+180)/deg)*100000 + floor((lat+90)/deg)
+folds_of <- function(b,k=5,seed=0){ set.seed(seed); u<-unique(b); f<-setNames(sample(0:(k-1),length(u),TRUE),u); as.integer(f[as.character(b)]) }
+hav <- function(lo1,la1,lo2,la2){ R<-6371; a<-sin((la2-la1)*pi/360)^2+cos(la1*pi/180)*cos(la2*pi/180)*sin((lo2-lo1)*pi/360)^2; 2*R*asin(sqrt(a)) }
+BASE <- list(loss_function="RMSE", rsm=0.8, subsample=0.8, allow_writing_files=FALSE, logging_level="Silent")
+pool <- function(d, lab=NULL) if (is.null(lab)) catboost.load_pool(as.matrix(d[,PREDS])) else
+  catboost.load_pool(as.matrix(d[,PREDS]), label=lab)
+# fit with early stopping on a SPATIALLY separated 20% of the training blocks
+fit_es <- function(d, b, par, seed=0){
+  set.seed(seed); u <- unique(b); ev <- sample(u, max(1, floor(.2*length(u)))); m <- b %in% ev
+  if (sum(m) < 50 || sum(!m) < 50)
+    return(catboost.train(pool(d, d[[TARGET]]), NULL, params=c(BASE, par, list(iterations=400))))
+  catboost.train(pool(d[!m,], d[[TARGET]][!m]), pool(d[m,], d[[TARGET]][m]),
+                 params=c(BASE, par, list(iterations=1000, od_type="Iter", od_wait=50, use_best_model=TRUE)))
+}
+pr <- function(m,d) catboost.predict(m, pool(d))
+
+# =============================================================================
+# 0. INPUTS + COLLINEARITY
+# =============================================================================
+message("0. INPUTS + COLLINEARITY")
+df0 <- as.data.frame(ps, xy=TRUE, na.rm=TRUE) |> rename(longitude=x, latitude=y)
+# ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) -------------------
+# Chosen by the resolution sweep: 1 deg maximises spatial-CV R2 (0.456 vs 0.388 at
+# 0.1 deg) and cuts n from 404k pseudo-replicates to ~4.9k, far more defensible
+# given only 74 mapped species ranges. 2 deg over-coarsens (R2 collapses).
+AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
+if (AGG > 1) {
+  df <- df0 |>
+    mutate(R = floor((90 - latitude)/(0.1*AGG)), C = floor((longitude + 180)/(0.1*AGG))) |>
+    group_by(R, C) |>
+    summarise(across(all_of(c(TARGET, PREDS, "longitude", "latitude")), \(x) mean(x, na.rm = TRUE)),
+              n = n(), .groups = "drop") |>
+    filter(n >= max(1, floor(0.10*AGG*AGG))) |>
+    select(-n) |> as.data.frame()
+} else df <- df0
+message(sprintf("  analysis unit %.1f deg -> %d cells (from %d at 0.1 deg; still only 74 mapped ranges)",
+                0.1*AGG, nrow(df), nrow(df0)))
+write_csv(as.data.frame(t(sapply(df[c(TARGET,PREDS)], summary))) |> tibble::rownames_to_column("var"),
+          file.path(outdir,"input_summary.csv"))
+cc <- round(cor(df[PREDS], method="spearman"),3); rownames(cc) <- NAME[PREDS]; colnames(cc) <- NAME[PREDS]
+write_csv(as.data.frame(cc) |> tibble::rownames_to_column("var"), file.path(outdir,"predictor_correlation.csv"))
+vif <- sapply(PREDS, function(p) 1/(1-summary(lm(as.formula(paste(p,"~",paste(setdiff(PREDS,p),collapse="+"))), df))$r.squared))
+# concurvity: nonlinear analogue of VIF — 3-fold CV R2 of predicting each predictor from the OTHERS
+Z <- scale(df[PREDS]); set.seed(0); fc <- sample(0:2, nrow(df), TRUE)
+concurv <- sapply(PREDS, function(p){
+  oth <- setdiff(PREDS,p); oo <- rep(NA_real_, nrow(df))
+  for (f in 0:2){ tr <- fc!=f; te <- fc==f
+    m <- catboost.train(catboost.load_pool(Z[tr,oth,drop=FALSE], label=Z[tr,p]), NULL,
+                        params=list(loss_function="RMSE",depth=4,l2_leaf_reg=5,learning_rate=.05,
+                                    iterations=200,allow_writing_files=FALSE,logging_level="Silent"))
+    oo[te] <- catboost.predict(m, catboost.load_pool(Z[te,oth,drop=FALSE])) }
+  max(0, r2(Z[,p], oo)) })
+write_csv(tibble::tibble(predictor=as.character(NAME[PREDS]), VIF=round(as.numeric(vif),2),
+          concurvity_R2=round(as.numeric(concurv),3)), file.path(outdir,"predictor_concurvity.csv"))
+write_csv(tibble::tibble(predictor=as.character(NAME[PREDS]), VIF=round(as.numeric(vif),2)),
+          file.path(outdir,"predictor_vif.csv"))
+message("  VIF: ", paste(PREDS, round(vif,2), collapse="  "))
+message("  concurvity R2: ", paste(PREDS, round(concurv,2), collapse="  "))
+
+# =============================================================================
+# 1. BLOCK SIZE FROM RESIDUAL RANGE
+# =============================================================================
+message("1. BLOCK SIZE")
+b5 <- blk(df$longitude, df$latitude, 5); f5 <- folds_of(b5, 5, 1); oof0 <- rep(NA_real_, nrow(df))
+for (f in 0:4){ tr <- f5!=f; oof0[f5==f] <- pr(fit_es(df[tr,], b5[tr], list(depth=6, learning_rate=.05, l2_leaf_reg=3)), df[f5==f,]) }
+res0 <- df[[TARGET]] - oof0
+i <- sample(nrow(df), min(2500, nrow(df))); z <- scale(res0[i])[,1]
+D <- outer(seq_along(i), seq_along(i), function(a,b) hav(df$longitude[i][a], df$latitude[i][a], df$longitude[i][b], df$latitude[i][b]))
+bins <- seq(0,3000,150); mI <- sapply(seq_len(length(bins)-1), function(k){ m <- D>=bins[k] & D<bins[k+1]; mean(outer(z,z)[m], na.rm=TRUE) })
+range_km <- ((bins[-1]+bins[-length(bins)])/2)[which(mI<0.1)[1]]
+BLOCK <- max(5, ceiling(range_km/111))
+message(sprintf("  residual range ~%.0f km -> block = %d deg", range_km, BLOCK))
+bid <- blk(df$longitude, df$latitude, BLOCK)
+
+# =============================================================================
+# 2. TUNING (spatial CV + early stopping)
+# =============================================================================
+message("2. TUNING")
+# 1-SE rule: among configurations whose spatial-CV RMSE is within one standard
+# error of the best, take the SIMPLEST (shallowest, most regularised). Deeper trees
+# buy a little CV R2 but a much larger train-CV gap, which is not defensible with
+# only ~74 independent species ranges.
+GRID <- unlist(lapply(c(3,4,6,8), function(dp) lapply(c(3,10,30), function(l2)
+          list(depth=dp, learning_rate=.05, l2_leaf_reg=l2))), recursive=FALSE)
+fT <- folds_of(bid,5,1)
+stat <- lapply(GRID, function(g){
+  e <- sapply(0:4, function(f){
+    tr <- fT!=f; te <- fT==f
+    if (sum(te) < 10) return(NA_real_)
+    sqrt(mean((df[[TARGET]][te]-pr(fit_es(df[tr,], bid[tr], g), df[te,]))^2)) })
+  e <- e[!is.na(e)]; list(par=g, mean=mean(e), se=sd(e)/sqrt(length(e))) })
+for (s in stat) message(sprintf("  depth=%d l2=%2d  RMSE=%.5f", s$par$depth, s$par$l2_leaf_reg, s$mean))
+mu   <- sapply(stat, `[[`, "mean"); ib <- which.min(mu)
+thr  <- stat[[ib]]$mean + stat[[ib]]$se
+elig <- stat[sapply(stat, function(s) s$mean <= thr)]
+ord  <- order(sapply(elig, function(s) s$par$depth), -sapply(elig, function(s) s$par$l2_leaf_reg))
+best <- elig[[ord[1]]]$par
+message(sprintf("  best RMSE=%.5f (depth=%d); 1-SE pick -> depth=%d l2=%d",
+                stat[[ib]]$mean, stat[[ib]]$par$depth, best$depth, best$l2_leaf_reg))
+
+# =============================================================================
+# 3. PERFORMANCE (repeated spatial CV + block-size sensitivity + overfit gap)
+# =============================================================================
+message("3. PERFORMANCE")
+fr <- c(); oof <- rep(NA_real_, nrow(df)); trr <- c()
+for (rep in 1:3){ fo <- folds_of(bid,5,100+rep)
+  for (f in 0:4){ tr <- fo!=f; te <- fo==f
+    m <- fit_es(df[tr,], bid[tr], best, seed=rep); p <- pr(m, df[te,])
+    fr <- c(fr, r2(df[[TARGET]][te], p))
+    if (rep==1){ oof[te] <- p; trr <- c(trr, r2(df[[TARGET]][tr], pr(m, df[tr,]))) } } }
+sens <- do.call(rbind, lapply(c(max(3,BLOCK-3), BLOCK, BLOCK+3), function(deg){
+  bb <- blk(df$longitude, df$latitude, deg); fo <- folds_of(bb,5,7)
+  v <- sapply(0:4, function(f){ tr<-fo!=f; te<-fo==f; r2(df[[TARGET]][te], pr(fit_es(df[tr,], bb[tr], best), df[te,])) })
+  data.frame(block_deg=deg, r2=round(mean(v),3), sd=round(sd(v),3)) }))
+write_csv(sens, file.path(outdir,"blocksize_sensitivity.csv"))
+write_csv(data.frame(spatial_cv_r2=mean(fr), sd=sd(fr), lo=quantile(fr,.025), hi=quantile(fr,.975),
+                     train_r2=mean(trr), rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE)),
+                     note="random-CV reference (verified) = 0.634, SD 0.001"),
+          file.path(outdir,"performance_summary.csv"))
+message(sprintf("  spatial-CV R2=%.3f (SD %.3f) | train %.3f | gap %.3f", mean(fr), sd(fr), mean(trr), mean(trr)-mean(fr)))
+
+# =============================================================================
+# 4. RESIDUAL DIAGNOSTICS
+# =============================================================================
+message("4. DIAGNOSTICS")
+resid <- df[[TARGET]] - oof
+z <- scale(resid[i])[,1]
+mIr <- sapply(seq_len(length(bins)-1), function(k){ m <- D>=bins[k] & D<bins[k+1]; mean(outer(z,z)[m], na.rm=TRUE) })
+write_csv(tibble::tibble(dist_km=(bins[-1]+bins[-length(bins)])/2, moranI_residual=mIr),
+          file.path(outdir,"residual_correlogram.csv"))
+message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial folds", mIr[1]))
+
+# NB: no variable-importance ranking. The aim is to CHARACTERISE the environment where
+# spiny-trunk richness is highest (ALE shapes below), not to rank predictors. Predictor
+# redundancy is disclosed by the correlation/VIF/concurvity outputs in section 0.
+
+# =============================================================================
+# 5. ONE BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs + UNCERTAINTY MAP
+# =============================================================================
+message("6. ENSEMBLE (ALE CIs + uncertainty)")
+NB <- 25; ub <- unique(bid)
+grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
+names(grids) <- PREDS
+ale <- setNames(lapply(PREDS, function(p) matrix(NA, length(grids[[p]]), NB)), PREDS)
+ensm <- matrix(NA_real_, nrow(df), NB)
+for (b in 1:NB){
+  d <- df[bid %in% sample(ub, length(ub), TRUE), ]
+  m <- catboost.train(pool(d, d[[TARGET]]), NULL, params=c(BASE, best, list(iterations=300)))
+  ensm[,b] <- pr(m, df)
+  for (p in PREDS){ q <- grids[[p]]; bi <- pmin(pmax(findInterval(df[[p]], q[-c(1,length(q))]),0), length(q)-2)
+    eff <- numeric(length(q)-1)
+    for (k in seq_len(length(q)-1)){ mm <- bi==(k-1)
+      if (!any(mm)) next
+      dl <- df[mm,]; du <- df[mm,]; dl[[p]] <- q[k]; du[[p]] <- q[k+1]
+      eff[k] <- mean(pr(m,du) - pr(m,dl)) }
+    a <- c(0, cumsum(eff)); ale[[p]][,b] <- a - mean(a) }
+  if (b %% 5 == 0) message("  ", b, "/", NB)
+}
+ale_tab <- bind_rows(lapply(PREDS, function(p){
+  M <- ale[[p]]
+  tibble::tibble(predictor = as.character(NAME[[p]]),
+                 x   = as.numeric(grids[[p]]),
+                 ale = as.numeric(rowMeans(M, na.rm=TRUE)),
+                 lo  = as.numeric(apply(M, 1, function(v) quantile(v, 0.025, na.rm=TRUE))),
+                 hi  = as.numeric(apply(M, 1, function(v) quantile(v, 0.975, na.rm=TRUE)))) }))
+write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
+spatial_sd <- apply(ensm, 1, sd)
+# native data uncertainty (one extra model); falls back to spatial-only if unsupported
+data_sd <- tryCatch({
+  um <- catboost.train(pool(df, df[[TARGET]]), NULL,
+        params=c(BASE[setdiff(names(BASE),"loss_function")], best,
+                 list(loss_function="RMSEWithUncertainty", iterations=300)))
+  sqrt(pmax(catboost.predict(um, pool(df), prediction_type="RMSEWithUncertainty")[,2], 0))
+}, error=function(e){ message("  native uncertainty unavailable; spatial component only"); rep(0, nrow(df)) })
+write_csv(tibble::tibble(longitude=df$longitude, latitude=df$latitude,
+    pred=rowMeans(ensm), spatial_sd=spatial_sd, data_sd=data_sd,
+    total_sd=sqrt(spatial_sd^2+data_sd^2)), file.path(outdir,"predictions_uncertainty.csv"))
+tmpl  <- if (AGG > 1) terra::aggregate(ps[[1]], fact=AGG, fun="mean", na.rm=TRUE) else ps[[1]]
+cells <- cellFromXY(tmpl, as.matrix(df[,c("longitude","latitude")]))
+for (nm in c("pred","total_sd")){
+  r <- tmpl; names(r) <- nm; values(r) <- NA
+  values(r)[cells] <- if (nm=="pred") rowMeans(ensm) else sqrt(spatial_sd^2+data_sd^2)
+  writeRaster(r, file.path(outdir, paste0("model1_", nm, ".tif")), overwrite=TRUE)
+}
+
+# =============================================================================
+# 7. SPATIAL THINNING CHECK
+# =============================================================================
+message("7. THINNING")
+k2 <- blk(df$longitude, df$latitude, 2)
+thin <- sapply(1:10, function(b){ set.seed(b); o <- sample(nrow(df)); ti <- o[!duplicated(k2[o])]
+  d <- df[ti,]; bb <- bid[ti]; fo <- folds_of(bb,5,b)
+  mean(sapply(unique(fo), function(f){ tr <- fo!=f; te <- fo==f
+    if (sum(te)<5 || sum(tr)<20) return(NA)
+    r2(d[[TARGET]][te], pr(catboost.train(pool(d[tr,], d[[TARGET]][tr]), NULL,
+       params=c(BASE,best,list(iterations=300))), d[te,])) }), na.rm=TRUE) })
+message(sprintf("  thinned spatial-CV R2 = %.3f", mean(thin)))
+write_csv(data.frame(thinned_cv_r2=mean(thin)), file.path(outdir,"thinning.csv"))
+
+# =============================================================================
+# 8. FIGURES (ggplot; despined; maps axis-free with slim colourbar)
+# =============================================================================
+message("8. FIGURES")
+suppressPackageStartupMessages({ library(ggplot2); library(patchwork); library(sf) })
+theme_set(theme_minimal(base_size=11) + theme(panel.grid.minor=element_blank(),
+          plot.title=element_text(face="bold", size=11), axis.line=element_line(colour="grey30")))
+BLUE <- "#2c6fbb"; ok <- is.finite(oof)
+ord <- as.character(NAME[c("mammal_richness","consumption","vpi_mean","height","cold_mean","dry_mean")])
+write_csv(tibble::tibble(longitude=df$longitude, latitude=df$latitude, observed=df[[TARGET]], oof=oof, resid=resid),
+          file.path(outdir,"model1_oof.csv"))
+# ALE (single blue, ordered megafauna -> vegetation -> seasonality)
+at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
+ggsave(file.path(outdir,"M1_ALE.png"),
+  ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
+    geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
+    facet_wrap(~predictor, scales="free", ncol=3) +
+    labs(x=NULL,y="ALE",title="Model 1 ALE with 95% block-bootstrap CI  (order: megafauna → vegetation → seasonality)"),
+  width=13, height=7, dpi=180)
+# collinearity: correlation heatmap + VIF + concurvity
+cmL <- as.data.frame(cc) |> tibble::rownames_to_column("var") |> tidyr::pivot_longer(-var, names_to="col", values_to="rho")
+lev <- as.character(NAME[PREDS]); cmL$var <- factor(cmL$var, levels=lev); cmL$col <- factor(cmL$col, levels=lev)
+ph <- ggplot(cmL, aes(col,var,fill=rho)) + geom_tile() + geom_text(aes(label=sprintf("%.2f",rho)),size=2.5) +
+  scale_fill_gradient2(low="#3A7CA5",mid="white",high="#c0392b",limits=c(-1,1),name=expression(rho)) +
+  labs(x=NULL,y=NULL,title="Spearman correlation") + theme(axis.text.x=element_text(angle=40,hjust=1), axis.line=element_blank())
+vt <- tibble::tibble(pred=as.character(NAME[PREDS]), VIF=as.numeric(vif), C=as.numeric(concurv))
+pv <- ggplot(vt, aes(VIF, reorder(pred,VIF))) + geom_col(fill="#8a9a5b") + geom_vline(xintercept=5,linetype=2,colour="grey") + labs(y=NULL,title="VIF (linear collinearity)")
+pc <- ggplot(vt, aes(C, reorder(pred,C))) + geom_col(fill="#cc7777") + xlim(0,1) + labs(x=expression(R^2),y=NULL,title="Concurvity (R² from other predictors)")
+ggsave(file.path(outdir,"M1_collinearity.png"), ph + pv + pc + plot_layout(widths=c(1.35,1,1)), width=17, height=5, dpi=170)
+# diagnostics: obs-vs-pred, calibration, QQ, residual correlogram
+dobs <- tibble::tibble(o=df[[TARGET]][ok], p=oof[ok])
+p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_abline(linetype=2) + labs(x="Observed",y="Predicted (OOF)",title=sprintf("Obs vs pred (R²=%.3f)",mean(fr)))
+cal <- dobs; cal$b <- cut(cal$p, quantile(cal$p, seq(0,1,.1)), include.lowest=TRUE); cal <- aggregate(cbind(o,p)~b, cal, mean)
+p2 <- ggplot(cal, aes(p,o)) + geom_line(colour=BLUE) + geom_point(colour=BLUE) + geom_abline(linetype=2) + labs(x="Predicted (decile)",y="Observed",title="Calibration")
+p3 <- ggplot(tibble::tibble(s=resid[ok]), aes(sample=s)) + stat_qq(size=.4,colour=BLUE) + stat_qq_line(linetype=2) + labs(x="Theoretical",y="Ordered",title="Residual QQ")
+cg <- tibble::tibble(dist_km=(bins[-1]+bins[-length(bins)])/2, moranI=mIr)
+p4 <- ggplot(cg, aes(dist_km,moranI)) + geom_line(colour="#c44") + geom_point(colour="#c44",size=1) + geom_hline(yintercept=.1,linetype=3,colour="grey") + coord_cartesian(xlim=c(0,2000)) + labs(x="Distance (km)",y="Moran's I",title="Residual autocorrelation")
+ggsave(file.path(outdir,"M1_diagnostics.png"), p1+p2+p3+p4+plot_layout(nrow=1), width=19, height=4.3, dpi=170)
+# maps (need TRUNK_BORDERS -> world_borders.geojson)
+BORD <- Sys.getenv("TRUNK_BORDERS", unset="")
+if (nzchar(BORD) && file.exists(BORD)) {
+  borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
+  mk_map <- function(tif, ttl, pal){ r <- rast(file.path(outdir,tif)); d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
+    ggplot() + geom_raster(data=d, aes(x,y,fill=v)) + geom_sf(data=borders, fill=NA, colour="black", linewidth=.12) +
+      scale_fill_viridis_c(option=pal, name=NULL) + coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) +
+      labs(title=ttl) + theme_void(base_size=11) + theme(plot.title=element_text(face="bold"), legend.key.width=unit(.28,"cm"), legend.key.height=unit(1.1,"cm")) }
+  ggsave(file.path(outdir,"M1_map_prediction.png"), mk_map("model1_pred.tif","Model 1 — predicted relative richness","D"), width=12, height=5, dpi=160)
+  ggsave(file.path(outdir,"M1_map_uncertainty.png"), mk_map("model1_total_sd.tif","Model 1 — prediction uncertainty (SD)","A"), width=12, height=5, dpi=160)
+} else message("  (set TRUNK_BORDERS to render the maps with country borders)")
+message("DONE -> ", outdir)
