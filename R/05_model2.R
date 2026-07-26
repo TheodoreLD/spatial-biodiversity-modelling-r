@@ -149,4 +149,68 @@ for (cond in names(tables)){ tab <- tables[[cond]]
         max_corr_env=max(abs(cor(sub[[cl]], sub[,ENV], method="spearman"))), resid_moran=moran(sub, rf$resid)) }
     message(sprintf("  %s/%s: %d clades", cond, cont, length(act))) } }
 write_csv(bind_rows(drows), file.path(outdir,"model2_diagnostics.csv"))
+
+# =============================================================================
+# figures (ggplot): slope ranking, shape+constrained-slope, R2 (mono vs unc),
+# confounding synthesis — per condition, continents faceted
+# =============================================================================
+message("figures")
+suppressPackageStartupMessages(library(ggplot2))
+theme_set(theme_minimal(base_size=10) + theme(panel.grid.minor=element_blank(),
+          plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30"),
+          strip.text=element_text(face="bold")))
+COL <- c(Americas="#E1812C",Africa="#3A7CA5",Asia="#4C9A4C")
+ED <- c("Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
+ORDER <- c("Cetartiodactyla","Perissodactyla","Rodentia","Primates","Proboscidea","Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
+lab_ed <- function(c) ifelse(c %in% ED, paste0(c," (ED)"), c)
+res <- read_csv(file.path(outdir,"model2_results.csv"), show_col_types=FALSE)
+unc <- read_csv(file.path(outdir,"model2_curves.csv"), show_col_types=FALSE)
+con <- read_csv(file.path(outdir,"model2_curves_constrained.csv"), show_col_types=FALSE)
+env <- read_csv(file.path(outdir,"model2_env_results.csv"), show_col_types=FALSE)
+dia <- read_csv(file.path(outdir,"model2_diagnostics.csv"), show_col_types=FALSE)
+for (cond in c("total","prickly","thorny")){
+  d <- res |> filter(condition==cond) |> mutate(continent=factor(continent,CONTS), lab=lab_ed(clade), s=slope*1e4)
+  ggsave(file.path(outdir,paste0("FIG_M2_slope_",cond,".png")),
+    ggplot(d, aes(s, reorder(lab,s), colour=continent)) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+      geom_errorbarh(aes(xmin=slope_lo*1e4,xmax=slope_hi*1e4),height=0,colour="grey60") + geom_point(size=2.6) +
+      scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent, scales="free_y") +
+      labs(x="Std. monotonic slope (×10⁻⁴ per +1 SD)", y=NULL,
+      title=sprintf("Model 2 — mammal-clade association with relative %s-trunk richness (ED = endemic)",cond)),
+    width=14, height=5, dpi=170)
+  su <- unc |> filter(condition==cond); sc <- con |> filter(condition==cond)
+  cl <- intersect(ORDER, unique(su$clade))
+  su$lab <- factor(lab_ed(su$clade), levels=lab_ed(cl)); sc$lab <- factor(lab_ed(sc$clade), levels=lab_ed(cl))
+  ggsave(file.path(outdir,paste0("FIG_M2_shape_plus_slope_",cond,".png")),
+    ggplot() + geom_ribbon(data=su, aes(x,ymin=y_lo,ymax=y_hi,fill=continent),alpha=.13) +
+      geom_line(data=su, aes(x,y,colour=continent),linewidth=.7) +
+      geom_line(data=sc, aes(x,y_fit,colour=continent),linetype=2,linewidth=.5) +
+      scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
+      facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
+      title=sprintf("Model 2 — unconstrained shape + constrained slope (dashed), relative %s-trunk richness",cond)) +
+      theme(legend.position="bottom"),
+    width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
+  ggsave(file.path(outdir,paste0("FIG_M2_r2_mono_",cond,".png")),
+    ggplot(d, aes(y=reorder(clade,r2_mono))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+      geom_errorbarh(aes(xmin=r2_mono_lo,xmax=r2_mono_hi),height=0,colour="grey60") +
+      geom_point(aes(x=r2_mono,colour=continent),size=2.4) + geom_point(aes(x=r2),shape=1,size=2.4,colour="grey30") +
+      scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent,scales="free_y") +
+      labs(x="Out-of-bag R² (filled = monotonic, open = unconstrained)", y=NULL,
+      title=sprintf("Model 2 — constrained vs unconstrained clade-model R², relative %s-trunk richness",cond)),
+    width=14, height=5, dpi=170)
+  m <- env |> filter(condition==cond) |> left_join(dia[,c("condition","continent","clade","r2_clade","shared")],
+        by=c("condition","continent","clade")) |>
+    mutate(continent=factor(continent,CONTS), conf=ifelse(r2_clade>0.01, pmin(pmax(shared/r2_clade,0),1), NA_real_),
+           stable=slope_uni*1e4>=0.5, retlab=ifelse(stable & !is.na(retained), sprintf("%.0f%%",retained*100),"n/a"),
+           lab=paste0(clade, ifelse(slope_env_lo>0,"*",""), "  (ret ",retlab,")"))
+  ggsave(file.path(outdir,paste0("FIG_M2_confounding_synthesis_",cond,".png")),
+    ggplot(m, aes(y=reorder(lab,slope_env))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+      geom_segment(aes(x=slope_uni*1e4,xend=slope_env*1e4,yend=reorder(lab,slope_env)),colour="grey75",linewidth=1) +
+      geom_point(aes(x=slope_uni*1e4),shape=1,size=2.3,colour="grey50") +
+      geom_errorbarh(aes(xmin=slope_env_lo*1e4,xmax=slope_env_hi*1e4),height=0,colour="grey55") +
+      geom_point(aes(x=slope_env*1e4,fill=conf),shape=21,size=3.2,colour="black") +
+      scale_fill_gradient(low="#fee8c8",high="#b30000",limits=c(0,1),name="confounded frac.",na.value="grey80") +
+      facet_wrap(~continent,scales="free_y") + labs(x="Std. slope ×10⁻⁴ (open = raw → filled = env-adjusted)", y=NULL,
+      title=sprintf("Model 2 — clade ranking robustness to environmental confounding, relative %s-trunk richness (* = env-adj CI>0)",cond)),
+    width=15, height=5, dpi=165)
+}
 message("DONE -> ", outdir)
