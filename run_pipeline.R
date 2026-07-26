@@ -28,5 +28,7 @@ source("R/02_descriptive.R")          # richness maps + biome/ecoregion distribu
 source("R/03_mammal_ecoregions.R")    # megafauna of the richest ecoregion per continent
 source("R/04_data_preparation.R")     # model-ready predictor + clade richness stacks
 source("R/05_model1.R")               # Model 1 — environmental characterisation (ALE)
+source("R/05_model1_sensitivity.R")   # Model 1 design justifications (resolution/transform/spatial-term)
+source("R/05_model1_jackknife.R")     # Model 1 species-drop robustness (Reviewer 1); needs TRUNK_RANGES + TRUNK_ABS/REL
 source("R/06_model2.R")               # Model 2 — mammal-clade associations
 message("pipeline complete -> outputs/")

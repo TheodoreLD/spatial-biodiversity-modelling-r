@@ -1,0 +1,5 @@
+transform,cv_r2_on_raw,resid_skew
+raw,0.42,0.71
+log,0.382,0.85
+logit,0.384,0.86
+sqrt,0.413,0.79

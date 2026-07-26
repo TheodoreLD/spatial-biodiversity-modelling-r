@@ -25,6 +25,11 @@ the richness layers and the richest ecoregions that the descriptive step charact
 | 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); diagnostics, uncertainty, maps, jackknife | `outputs/model1/` |
 | 6 | `06_model2.R` | **Model 2** — univariate mammal-clade associations: monotonic slope + unconstrained shape + OOB R² (both) + environment-adjusted **ALE** slope + variance-partitioning diagnostics | `outputs/model2/` |
 
+Model 1 has two companion scripts (Reviewer responses / methods justification):
+`05_model1_sensitivity.R` — resolution / transform / spatial-term sweeps (why 1°, why no
+transform, why no spatial term); `05_model1_jackknife.R` — species-drop robustness (are
+the ALE shapes and CV-R² stable when 30% of the 74 species are removed?).
+
 `R/config.R` holds `here()`-based paths; `R/requirements.R` lists packages.
 
 ## The three "conditions"
