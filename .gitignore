@@ -1,0 +1,31 @@
+# Heavy data (archived on Dryad, not in git)
+*.tif
+*.tiff
+*.nc
+*.gpkg
+*.shp
+*.dbf
+*.shx
+*.prj
+*.rds
+*.RData
+*.zip
+*.pkl
+*.csv.gz
+
+# Python
+__pycache__/
+*.pyc
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Run logs (regenerate from stdout)
+*_log.txt
+run_log.txt

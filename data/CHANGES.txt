@@ -1,0 +1,48 @@
+CORRECTIONS APPLIED TO Spiny_species_corrected.xlsx
+(source: Dryad archive Data/Name_spiny_species/Spiny_species.xlsx; original NOT modified)
+====================================================================
+
+1. GENUS TYPO
+   "Bridela retusa" -> "Bridelia retusa"
+   Reason: "Bridela" is a misspelling of the genus Bridelia (Phyllanthaceae).
+   Effect: unique genera 23 -> 22, matching the manuscript ("22 genera").
+
+2. MISSING CONTINENT
+   "Hura crepitans" Native: <blank> -> "Americas"
+   Reason: Hura crepitans is Neotropical. The blank caused the data's Americas
+   tally to read 44 instead of the correct 45 (Table 1).
+
+3. CATEGORY STANDARDIZATION (Native column -> Table 1 vocabulary)
+   "America"      -> "Americas"   (all rows)
+   "Africa/asia"  -> "Africa/Asia" (Toddalia asiatica; capitalization)
+   "Middle East"  -> "Asia"        (Gleditsia caspica; Caucasus/S. Caspian = West Asia)
+                                    *** PLEASE CONFIRM this assignment. ***
+
+4. RANGE-AVAILABILITY FLAGS (Range column) — corrected against the actual range files
+   "Dalbergia horrida"       Range: Yes -> No   (no .gpkg range file exists for it)
+   "Zanthoxylum ovalifolium" Range: No  -> Yes  (a .gpkg range file exists and was used)
+   Reason: the two Range flags disagreed with the range-map source
+   (Data/Range_spiny_species/TreeSpecies.zip: 74 species, 2 .gpkg each).
+   The richness maps are built by rasterizing the actual .gpkg files
+   (data_preparation/01_biogeography_trunk.R), so the analysis ALREADY used
+   Zanthoxylum ovalifolium and excluded Dalbergia horrida. Results are therefore
+   unchanged (74 mapped species = 46 prickly + 28 thorny); this fix only makes the
+   Range column honestly record which 74 species entered the maps. Before the fix the
+   Range=Yes set implied 45 prickly + 29 thorny, which did not match the analysis.
+
+VERIFICATION — corrected continent x syndrome cross-tab:
+              Prickly  Thorny  Total
+   Americas       34      11     45
+   Africa         11       4     15
+   Asia           10      21     31
+   Africa/Asia     1       2      3
+   Australia       1       0      1
+   TOTAL          57      38     95
+
+This matches Table 1 exactly EXCEPT the Asia total:
+   Table 1 prints Asia Total = 32, but 10 prickly + 21 thorny = 31.
+   -> Table 1 Asia total is an arithmetic typo; the correct value is 31
+      (grand total 95 is unaffected: 45+15+31+3+1 = 95).
+
+Apply the same corrections to Table S1 in the Supporting Information so that
+Spiny_species.xlsx, Table 1, and Table S1 all agree.
