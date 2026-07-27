@@ -11,7 +11,7 @@ RELD <- Sys.getenv("TRUNK_REL_DIR", ".")
 ECOSHP <- Sys.getenv("TRUNK_ECO", "Ecoregions2017.shp")
 BORD <- Sys.getenv("TRUNK_BORDERS", "")
 outdir <- file.path("outputs","descriptive"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
-theme_set(theme_minimal(base_size=10) + theme(panel.grid.minor=element_blank(),
+theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
           plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30")))
 BCOL <- c("Tropical & Subtropical Grasslands, Savannas & Shrublands"="#8c6d31","Flooded Grasslands & Savannas"="#7b3fa0",
           "Tropical & Subtropical Dry Broadleaf Forests"="#c0392b","Tropical & Subtropical Moist Broadleaf Forests"="#2e8b57",
@@ -93,7 +93,7 @@ mk_eco <- function(ec) { top <- head(ec,25); top$ECO_NAME <- factor(top$ECO_NAME
   ggplot(top, aes(mean, ECO_NAME)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
     geom_point(aes(colour=BIOME_NAME), size=2.6) + scale_colour_manual(values=sapply(unique(top$BIOME_NAME),bcol),
       labels=function(b) blab(b), name="Biome") + labs(x="Mean relative richness (± 95% CI)", y=NULL) +
-    theme(legend.position=c(.98,.02), legend.justification=c(1,0), legend.text=element_text(size=6.5), legend.title=element_text(size=7.5)) }
+    theme(legend.position="right", legend.text=element_text(size=6.5), legend.title=element_text(size=7.5)) }
 for (cond in names(S)){
   ggsave(file.path(outdir,sprintf("FIG_biome_%s.png",cond)), mk_biome(S[[cond]]$bio) + labs(title=sprintf("Relative %s-trunk richness by biome",cond)), width=10, height=6, dpi=170)
   ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)), mk_eco(S[[cond]]$ec) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness",cond)), width=10.5, height=9, dpi=170)
@@ -102,7 +102,7 @@ for (cond in names(S)){
   pa <- mk_map(relmap, sprintf("A)  Relative richness of %s-trunk species (0.1°)",cond), "Relative richness", "D")
   pb <- mk_biome(S[[cond]]$bio) + labs(title="B)  By biome") + theme(plot.title=element_text(hjust=0))
   pc <- mk_eco(S[[cond]]$ec) + labs(title="C)  Top 25 ecoregions") + theme(plot.title=element_text(hjust=0))
-  comp <- pa / (pb | pc) + plot_layout(heights=c(1,1.5))
-  ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp, width=16, height=12.4, dpi=160)
+  comp <- pa / (pb | pc) + plot_layout(heights=c(1.25,1.5))
+  ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp, width=16, height=13.4, dpi=160)
 }
 message("DONE -> ", outdir)
