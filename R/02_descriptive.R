@@ -1,7 +1,7 @@
 # =============================================================================
-# 06_descriptive.R — richness maps, biome & ecoregion distributions (block-bootstrap
-# CIs + rank-stability), and the Fig-3 composite. All R (ggplot). Mirrors the Python
-# descriptive. Inputs via env vars: TRUNK_REL_DIR (folder with Absolute_/Relative_
+# 02_descriptive.R — richness maps, biome & ecoregion distributions (block-bootstrap
+# CIs + rank-stability), and the Fig-3 composite. All R (ggplot).
+# Inputs via env vars: TRUNK_REL_DIR (folder with Absolute_/Relative_
 # Richness_*.tif), TRUNK_ECO (Ecoregions2017.shp), TRUNK_BORDERS (world_borders.geojson).
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(sf); library(dplyr); library(readr)

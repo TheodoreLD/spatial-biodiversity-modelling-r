@@ -61,8 +61,9 @@ woody-plant richness (partly controls for uneven botanical sampling).
 3. **Get the heavy data** from **Dryad** (see `data/README.md` for the DOI): raw ranges,
    PHYLACINE mammal ranges, environmental rasters, the Ecoregions2017 shapefile, and the
    derived richness/predictor stacks. They are not in git (size).
-4. **Run** `run_pipeline.R` (or the `R/` scripts in order). Steps 4–6 read the derived
-   rasters via environment variables set by `run_pipeline.R`.
+4. **Run** `run_pipeline.R` (or the `R/` scripts in order). The descriptive step and the
+   models (`02`, `05`, `06`) read the derived rasters via environment variables set by
+   `run_pipeline.R`.
 
 Country borders for the maps are in `data/assets/world_borders.geojson` (exported from R's
 `maps` package). Committed outputs are figures (`.png`) and tables (`.csv`); rasters

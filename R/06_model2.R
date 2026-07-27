@@ -1,6 +1,6 @@
 # =============================================================================
-# 05_model2.R — Model 2 (mammal-clade associations), native CatBoost. Mirrors the
-# Python model2 pipeline. Univariate per continent x condition x clade:
+# 06_model2.R — Model 2 (mammal-clade associations), native CatBoost.
+# Univariate per continent x condition x clade:
 #   * monotonic model  -> standardized slope (the clade-ranking metric)
 #   * unconstrained    -> response-curve shape + OOB R2
 #   * BOTH models' OOB R2 (constrained + unconstrained)
@@ -33,7 +33,7 @@ cont_of <- function(lo,la){ out <- rep("Other", length(lo))
   out[lo>= 25  & lo<=180 & la>=-12 & la<=80] <- "Asia"; out }
 blocks <- function(sub, deg=7) floor((sub$lon+180)/deg)*100000 + floor((sub$lat+90)/deg)
 
-# ---- build 1-degree tables (mirror model2_build.py) -------------------------
+# ---- build 1-degree tables ---------------------------------------------------
 message("build 1-degree tables")
 ps <- rast(PRED); cs <- rast(CLADE)
 env_v <- values(ps[[ENV]]); envfin <- rowSums(is.finite(env_v))==length(ENV)

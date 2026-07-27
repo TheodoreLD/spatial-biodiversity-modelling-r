@@ -1,5 +1,5 @@
 # =============================================================================
-# 02_mammal_ecoregions.R  (revised)
+# 03_mammal_ecoregions.R
 # Present-natural large-herbivore species list per richest ecoregion / continent.
 #
 # FIXES vs original:
@@ -68,4 +68,4 @@ region_order_counts <- ecoregion_unnested |>
   arrange(Ecoregion, desc(SpeciesCount))
 
 write_csv(region_order_counts, file.path(paths$ecoregion_mammal, "ecoregion_order_counts.csv"))
-message("02_mammal_ecoregions.R completed.")
+message("03_mammal_ecoregions.R completed.")

@@ -1,5 +1,5 @@
 # =============================================================================
-# model1_catboost.R — FINAL validated Model 1, native CatBoost. Mirrors model1.py.
+# 05_model1.R — FINAL validated Model 1, native CatBoost.
 # Response = relative spiny-trunk richness (bounded proportion).
 #
 # Design decisions (verified, not assumed):
@@ -204,9 +204,9 @@ ale_tab <- bind_rows(lapply(PREDS, function(p){
 write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
 
 # =============================================================================
-# 7. SPATIAL THINNING CHECK
+# 6. SPATIAL THINNING CHECK
 # =============================================================================
-message("7. THINNING")
+message("6. THINNING")
 k2 <- blk(df$longitude, df$latitude, 2)
 thin <- sapply(1:10, function(b){ set.seed(b); o <- sample(nrow(df)); ti <- o[!duplicated(k2[o])]
   d <- df[ti,]; bb <- bid[ti]; fo <- folds_of(bb,5,b)
@@ -218,9 +218,9 @@ message(sprintf("  thinned spatial-CV R2 = %.3f", mean(thin)))
 write_csv(data.frame(thinned_cv_r2=mean(thin)), file.path(outdir,"thinning.csv"))
 
 # =============================================================================
-# 8. FIGURES (ggplot; despined; maps axis-free with slim colourbar)
+# 7. FIGURES (ggplot; despined)
 # =============================================================================
-message("8. FIGURES")
+message("7. FIGURES")
 suppressPackageStartupMessages({ library(ggplot2); library(patchwork) })
 theme_set(theme_minimal(base_size=11) + theme(panel.grid.minor=element_blank(),
           plot.title=element_text(face="bold", size=11), axis.line=element_line(colour="grey30")))
