@@ -14,7 +14,7 @@
 #     redundancy is disclosed by correlation + VIF + concurvity, not ranked.
 #   * NO spatial term: tested, it erases the ecological signal (see sensitivity tests).
 #   * ALE (not PDP) for effect shapes — stays valid under correlated predictors.
-#   * ONE block-bootstrap ensemble serves both the ALE CIs and the uncertainty map.
+#   * ONE block-bootstrap ensemble provides the ALE CIs.
 #   * early stopping on a spatially separated eval subset of the training blocks.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
@@ -175,18 +175,16 @@ message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial 
 # redundancy is disclosed by the correlation/VIF/concurvity outputs in section 0.
 
 # =============================================================================
-# 5. ONE BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs + UNCERTAINTY MAP
+# 5. BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs
 # =============================================================================
-message("6. ENSEMBLE (ALE CIs + uncertainty)")
+message("5. ENSEMBLE (ALE CIs)")
 NB <- 25; ub <- unique(bid)
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
 ale <- setNames(lapply(PREDS, function(p) matrix(NA, length(grids[[p]]), NB)), PREDS)
-ensm <- matrix(NA_real_, nrow(df), NB)
 for (b in 1:NB){
   d <- df[bid %in% sample(ub, length(ub), TRUE), ]
   m <- catboost.train(pool(d, d[[TARGET]]), NULL, params=c(BASE, best, list(iterations=300)))
-  ensm[,b] <- pr(m, df)
   for (p in PREDS){ q <- grids[[p]]; bi <- pmin(pmax(findInterval(df[[p]], q[-c(1,length(q))]),0), length(q)-2)
     eff <- numeric(length(q)-1)
     for (k in seq_len(length(q)-1)){ mm <- bi==(k-1)
@@ -204,24 +202,6 @@ ale_tab <- bind_rows(lapply(PREDS, function(p){
                  lo  = as.numeric(apply(M, 1, function(v) quantile(v, 0.025, na.rm=TRUE))),
                  hi  = as.numeric(apply(M, 1, function(v) quantile(v, 0.975, na.rm=TRUE)))) }))
 write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
-spatial_sd <- apply(ensm, 1, sd)
-# native data uncertainty (one extra model); falls back to spatial-only if unsupported
-data_sd <- tryCatch({
-  um <- catboost.train(pool(df, df[[TARGET]]), NULL,
-        params=c(BASE[setdiff(names(BASE),"loss_function")], best,
-                 list(loss_function="RMSEWithUncertainty", iterations=300)))
-  sqrt(pmax(catboost.predict(um, pool(df), prediction_type="RMSEWithUncertainty")[,2], 0))
-}, error=function(e){ message("  native uncertainty unavailable; spatial component only"); rep(0, nrow(df)) })
-write_csv(tibble::tibble(longitude=df$longitude, latitude=df$latitude,
-    pred=rowMeans(ensm), spatial_sd=spatial_sd, data_sd=data_sd,
-    total_sd=sqrt(spatial_sd^2+data_sd^2)), file.path(outdir,"predictions_uncertainty.csv"))
-tmpl  <- if (AGG > 1) terra::aggregate(ps[[1]], fact=AGG, fun="mean", na.rm=TRUE) else ps[[1]]
-cells <- cellFromXY(tmpl, as.matrix(df[,c("longitude","latitude")]))
-for (nm in c("pred","total_sd")){
-  r <- tmpl; names(r) <- nm; values(r) <- NA
-  values(r)[cells] <- if (nm=="pred") rowMeans(ensm) else sqrt(spatial_sd^2+data_sd^2)
-  writeRaster(r, file.path(outdir, paste0("model1_", nm, ".tif")), overwrite=TRUE)
-}
 
 # =============================================================================
 # 7. SPATIAL THINNING CHECK
@@ -241,7 +221,7 @@ write_csv(data.frame(thinned_cv_r2=mean(thin)), file.path(outdir,"thinning.csv")
 # 8. FIGURES (ggplot; despined; maps axis-free with slim colourbar)
 # =============================================================================
 message("8. FIGURES")
-suppressPackageStartupMessages({ library(ggplot2); library(patchwork); library(sf) })
+suppressPackageStartupMessages({ library(ggplot2); library(patchwork) })
 theme_set(theme_minimal(base_size=11) + theme(panel.grid.minor=element_blank(),
           plot.title=element_text(face="bold", size=11), axis.line=element_line(colour="grey30")))
 BLUE <- "#2c6fbb"; ok <- is.finite(oof)
@@ -275,15 +255,4 @@ p3 <- ggplot(tibble::tibble(s=resid[ok]), aes(sample=s)) + stat_qq(size=.4,colou
 cg <- tibble::tibble(dist_km=(bins[-1]+bins[-length(bins)])/2, moranI=mIr)
 p4 <- ggplot(cg, aes(dist_km,moranI)) + geom_line(colour="#c44") + geom_point(colour="#c44",size=1) + geom_hline(yintercept=.1,linetype=3,colour="grey") + coord_cartesian(xlim=c(0,2000)) + labs(x="Distance (km)",y="Moran's I",title="Residual autocorrelation")
 ggsave(file.path(outdir,"M1_diagnostics.png"), p1+p2+p3+p4+plot_layout(nrow=1), width=19, height=4.3, dpi=170)
-# maps (need TRUNK_BORDERS -> world_borders.geojson)
-BORD <- Sys.getenv("TRUNK_BORDERS", unset="")
-if (nzchar(BORD) && file.exists(BORD)) {
-  borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
-  mk_map <- function(tif, ttl, pal){ r <- rast(file.path(outdir,tif)); d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
-    ggplot() + geom_raster(data=d, aes(x,y,fill=v)) + geom_sf(data=borders, fill=NA, colour="black", linewidth=.12) +
-      scale_fill_viridis_c(option=pal, name=NULL) + coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) +
-      labs(title=ttl) + theme_void(base_size=11) + theme(plot.title=element_text(face="bold"), legend.key.width=unit(.28,"cm"), legend.key.height=unit(1.1,"cm")) }
-  ggsave(file.path(outdir,"M1_map_prediction.png"), mk_map("model1_pred.tif","Model 1 — predicted relative richness","D"), width=12, height=5, dpi=160)
-  ggsave(file.path(outdir,"M1_map_uncertainty.png"), mk_map("model1_total_sd.tif","Model 1 — prediction uncertainty (SD)","A"), width=12, height=5, dpi=160)
-} else message("  (set TRUNK_BORDERS to render the maps with country borders)")
 message("DONE -> ", outdir)

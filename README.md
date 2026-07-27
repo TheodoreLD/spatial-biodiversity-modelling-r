@@ -22,7 +22,7 @@ the richness layers and the richest ecoregions that the descriptive step charact
 | 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome & ecoregion distributions (block-bootstrap CIs + rank-stability), Fig-3 composite | `outputs/descriptive/` |
 | 3 | `03_mammal_ecoregions.R` | present-natural megafauna (>5 kg) of the richest ecoregion per continent | `outputs/ecoregion_mammal/` |
 | 4 | `04_data_preparation.R` | model-ready predictor stack + per-clade richness stack | `outputs/raster_model/` |
-| 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); diagnostics, uncertainty, maps, jackknife | `outputs/model1/` |
+| 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); collinearity + residual diagnostics | `outputs/model1/` |
 | 6 | `06_model2.R` | **Model 2** — univariate mammal-clade associations: monotonic slope + unconstrained shape + OOB R² (both) + environment-adjusted **ALE** slope + variance-partitioning diagnostics | `outputs/model2/` |
 
 Model 1 has two companion scripts (Reviewer responses / methods justification):
