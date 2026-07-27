@@ -1,6 +1,8 @@
 # =============================================================================
-# 03_data_preparation_models.R
+# 04_data_preparation.R
 # Prepare predictor and mammal clade richness stacks for downstream modeling.
+# Writes the canonical stacks (predictor_stack.tif / Clade_richness_stack.tif) that
+# 05_model1.R and 06_model2.R read via TRUNK_STACK / TRUNK_CLADE.
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -138,13 +140,13 @@ names(predictor_stack) <- c(
   "consumption"
 )
 
-terra::writeRaster(predictor_stack, file.path(paths$raster_model, "predictor_target_stack.tif"), overwrite = TRUE)
-saveRDS(predictor_stack, file.path(paths$raster_model, "predictor_target_stack.rds"))
+terra::writeRaster(predictor_stack, file.path(paths$raster_model, "predictor_stack.tif"), overwrite = TRUE)
+saveRDS(predictor_stack, file.path(paths$raster_model, "predictor_stack.rds"))
 
 model_df <- as.data.frame(predictor_stack, xy = TRUE) %>%
   rename(longitude = x, latitude = y) %>%
   filter(!is.na(trunkrichness))
-readr::write_csv(model_df, file.path(paths$raster_model, "predictor_target_table.csv"))
+readr::write_csv(model_df, file.path(paths$raster_model, "predictor_table.csv"))
 
 for (layer_name in names(predictor_stack)) {
   plot_raster_to_pdf(
@@ -163,8 +165,8 @@ clade_stack <- build_clade_richness_stack(
   output_dir = paths$raster_model
 )
 
-terra::writeRaster(clade_stack, file.path(paths$raster_model, "mammal_clade_richness_stack.tif"), overwrite = TRUE)
-saveRDS(clade_stack, file.path(paths$raster_model, "mammal_clade_richness_stack.rds"))
+terra::writeRaster(clade_stack, file.path(paths$raster_model, "Clade_richness_stack.tif"), overwrite = TRUE)
+saveRDS(clade_stack, file.path(paths$raster_model, "Clade_richness_stack.rds"))
 
 for (clade in names(clade_stack)) {
   plot_raster_to_pdf(
