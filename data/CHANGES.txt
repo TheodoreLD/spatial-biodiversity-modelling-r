@@ -1,4 +1,4 @@
-CORRECTIONS APPLIED TO Spiny_species_corrected.xlsx
+CORRECTIONS APPLIED TO spiny_trunk_species.xlsx
 (source: Dryad archive Data/Name_spiny_species/Spiny_species.xlsx; original NOT modified)
 ====================================================================
 
@@ -24,7 +24,7 @@ CORRECTIONS APPLIED TO Spiny_species_corrected.xlsx
    Reason: the two Range flags disagreed with the range-map source
    (Data/Range_spiny_species/TreeSpecies.zip: 74 species, 2 .gpkg each).
    The richness maps are built by rasterizing the actual .gpkg files
-   (data_preparation/01_biogeography_trunk.R), so the analysis ALREADY used
+   (R/01_biogeography.R), so the analysis ALREADY used
    Zanthoxylum ovalifolium and excluded Dalbergia horrida. Results are therefore
    unchanged (74 mapped species = 46 prickly + 28 thorny); this fix only makes the
    Range column honestly record which 74 species entered the maps. Before the fix the
