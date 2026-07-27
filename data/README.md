@@ -24,6 +24,10 @@ They include:
 - `output/Biogeography/rasters/` — absolute & relative richness (total / prickly / thorny).
 
 ## Pointing the scripts at the data
-The Python analyses read the rasters through the `TRUNK_DATA` environment variable —
-set it to the folder holding the Dryad `output/Raster_model/` rasters (and, for the
-descriptive step, the `output/Biogeography/rasters/` + `Data/Ecoregion/` files).
+`run_pipeline.R` sets `TRUNK_*` environment variables that point the descriptive step
+and the models at the derived rasters — `TRUNK_STACK` / `TRUNK_CLADE` (the
+`Raster_model/` stacks), `TRUNK_REL_DIR` (the `Biogeography/rasters/` folder),
+`TRUNK_ECO` (the Ecoregions2017 shapefile) and `TRUNK_BORDERS`
+(`data/assets/world_borders.geojson`). Edit the paths at the top of `run_pipeline.R`
+to match where your rasters live — either the Dryad `output/` layout or the
+`outputs/` folders rebuilt by `01_biogeography.R` and `04_data_preparation.R`.

@@ -1,8 +1,8 @@
-# requirements.R  (revised) — install R packages for the pipeline + revision analyses
+# requirements.R — install the R packages the pipeline uses
+# (reconciled against actual library()/:: usage across R/; CatBoost installed separately)
 required_packages <- c(
   "here", "terra", "sf", "dplyr", "tidyr", "purrr", "readr",
-  "ggplot2", "viridis", "forcats", "rnaturalearth", "blockCV",
-  "ppcor"   # added: partial correlations for the environment-controlled clade models
+  "ggplot2", "viridis", "patchwork", "scales", "tibble"
 )
 installed <- rownames(installed.packages())
 to_install <- setdiff(required_packages, installed)
