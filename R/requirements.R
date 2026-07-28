@@ -1,7 +1,8 @@
 # requirements.R — install the R packages the pipeline uses
 required_packages <- c(
-  "here", "terra", "sf", "dplyr", "tidyr", "purrr", "readr",
-  "ggplot2", "viridis", "patchwork", "scales", "tibble"
+  "here", "terra", "sf", "dplyr", "tidyr", "purrr", "readr", "stringr",
+  "ggplot2", "viridis", "patchwork", "scales", "tibble",
+  "readxl", "TNRS"   # step 0: read the species xlsx + resolve names (TNRS needs internet)
 )
 installed <- rownames(installed.packages())
 to_install <- setdiff(required_packages, installed)

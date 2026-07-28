@@ -17,7 +17,7 @@ the richness layers and the richest ecoregions that the descriptive step charact
 
 | step | script | does | writes to |
 |---|---|---|---|
-| 0 | `00_standardization.R` | harmonise spiny-species names | `data/processed/` |
+| 0 | `00_standardization.R` | standardise species names against WFO + WCVP with synonym resolution via **TNRS** (needs internet) | `data/processed/` |
 | 1 | `01_biogeography.R` | rasterise ranges ÷ woody richness → absolute + relative richness (total/prickly/thorny) | `outputs/biogeography/` |
 | 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome & ecoregion distributions (block-bootstrap CIs + rank-stability), Fig-3 composite | `outputs/descriptive/` |
 | 3 | `03_mammal_ecoregions.R` | present-natural megafauna (>5 kg) of the richest ecoregion per continent | `outputs/ecoregion_mammal/` |

@@ -36,8 +36,10 @@ paths <- list(
   model1         = here('outputs', 'model1'),
   model2         = here('outputs', 'model2'),
 
-  # derived inputs consumed by the descriptive step (02) and the models (05/06);
-  # built by 01/04, or repoint these at a Dryad download.
+  # source species list (00 standardises its names) + derived inputs consumed by
+  # the descriptive step (02) and the models (05/06); built by 01/04, or repoint
+  # these at a Dryad download.
+  species_xlsx    = here('data', 'spiny_trunk_species.xlsx'),
   predictor_stack = here('outputs', 'raster_model', 'predictor_stack.tif'),
   clade_stack     = here('outputs', 'raster_model', 'Clade_richness_stack.tif'),
   abs_richness    = here('outputs', 'biogeography', 'rasters', 'Absolute_Richness_Tot.tif'),

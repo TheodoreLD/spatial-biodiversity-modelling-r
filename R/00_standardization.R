@@ -1,40 +1,44 @@
-# 00_standardization.R
-# Purpose: Standardize species names
+# =============================================================================
+# 00_standardization.R — taxonomic name standardization.
+# Resolves the spiny-trunk species names against the World Flora Online (WFO) and
+# the World Checklist of Vascular Plants (WCVP), with synonym resolution via the
+# Taxonomic Name Resolution Service (TNRS package; Maitner & Boyle 2024), for
+# nomenclatural consistency across sources.
+#
+# NB TNRS queries a web service -> this step needs an internet connection.
+# Input : data/spiny_trunk_species.xlsx  (column `Species`)   [paths$species_xlsx]
+# Output: data/processed/species_standardized.csv             [paths$data_processed]
+# =============================================================================
+suppressPackageStartupMessages({
+  library(readxl); library(dplyr); library(stringr); library(readr); library(TNRS)
+})
+source("R/config.R")
+create_project_dirs()
 
-library(dplyr)
-library(readr)
-library(here)
+infile  <- require_file(paths$species_xlsx, "spiny-trunk species list")
+outfile <- file.path(paths$data_processed, "species_standardized.csv")
 
-# ---- FUNCTION ----
-standardize_species_names <- function(input_path, output_path) {
-  
-  cat("Reading input data...\n")
-  data <- read_csv(input_path)
-  
-  cat("Standardizing species names...\n")
-  
-  data_clean <- data %>%
-    mutate(
-      Species = trimws(Species),
-      Species = tolower(Species)
-    )
-  
-  # Add more cleaning rules here if needed
-  
-  cat("Writing cleaned data...\n")
-  write_csv(data_clean, output_path)
-  
-  cat("Standardization complete\n")
-  
-  return(data_clean)
-}
+# ---- submitted names ---------------------------------------------------------
+raw_names <- read_excel(infile)$Species |>
+  str_replace_all("_", " ") |> str_squish()
+raw_names <- unique(raw_names[!is.na(raw_names) & raw_names != ""])
+message(length(raw_names), " unique names submitted to TNRS (WCVP + WFO)")
 
-# ---- EXECUTION ----
-input_file <- here("data", "raw", "species_raw.csv")
-output_file <- here("data", "processed", "species_clean.csv")
+# ---- resolve to WCVP + WFO via TNRS (best single match per name) --------------
+res <- TNRS(taxonomic_names = raw_names, sources = c("wcvp", "wfo"), matches = "best")
 
-if (file.exists(input_file)) {
-  standardize_species_names(input_file, output_file)
-} else {
-  cat("Input file not found. Skipping step.\n")
-}
+standardized <- res |>
+  transmute(
+    submitted_name   = Name_submitted,
+    accepted_species = Accepted_species,      # binomial used downstream
+    accepted_name    = Accepted_name,         # full accepted name (with author)
+    taxonomic_status = Taxonomic_status,      # Accepted / Synonym / No opinion ...
+    match_source     = Source,                # wcvp / wfo
+    overall_score    = Overall_score
+  ) |>
+  arrange(submitted_name)
+
+write_csv(standardized, outfile)
+message(sprintf("standardization complete -> %s  (%d names; %d not flagged 'Accepted')",
+                outfile, nrow(standardized),
+                sum(standardized$taxonomic_status != "Accepted", na.rm = TRUE)))
