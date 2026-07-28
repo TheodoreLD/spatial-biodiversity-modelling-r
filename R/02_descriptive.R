@@ -90,11 +90,16 @@ mk_biome <- function(bio) { bio$biome <- factor(bio$biome, levels=rev(bio$biome)
   ggplot(bio, aes(mean, biome)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
     geom_point(aes(colour=biome), size=3) + scale_colour_manual(values=sapply(levels(bio$biome),bcol),guide="none") +
     scale_y_discrete(labels=function(b) blab(as.character(b))) + labs(x="Mean relative richness (± 95% CI)", y=NULL) }
-mk_eco <- function(ec) { top <- head(ec,25); top$ECO_NAME <- factor(top$ECO_NAME, levels=rev(top$ECO_NAME))
-  ggplot(top, aes(mean, ECO_NAME)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
+mk_eco <- function(ec) { top <- head(ec,25)
+  lab <- paste0(top$ECO_NAME, "  (", round(top$top15_freq*100), "%)")   # append rank stability
+  top$lab <- factor(lab, levels=rev(lab))
+  ggplot(top, aes(mean, lab)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
     geom_point(aes(colour=BIOME_NAME), size=2.6) + scale_colour_manual(values=sapply(unique(top$BIOME_NAME),bcol),
-      labels=function(b) blab(b), name="Biome") + labs(x="Mean relative richness (± 95% CI)", y=NULL) +
-    theme(legend.position="right", legend.text=element_text(size=6.5), legend.title=element_text(size=7.5)) }
+      labels=function(b) blab(b), name="Biome") +
+    labs(x="Mean relative richness (± 95% CI)", y=NULL,
+         caption="(x%) = rank stability: share of spatial block-bootstrap resamples ranking the ecoregion in the top 15") +
+    theme(legend.position="right", legend.text=element_text(size=6.5), legend.title=element_text(size=7.5),
+          plot.caption=element_text(hjust=0, size=7.5, colour="grey30")) }
 for (cond in names(S)){
   ggsave(file.path(outdir,sprintf("FIG_biome_%s.png",cond)), mk_biome(S[[cond]]$bio) + labs(title=sprintf("Relative %s-trunk richness by biome",cond)), width=10, height=6, dpi=170)
   ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)), mk_eco(S[[cond]]$ec) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness",cond)), width=10.5, height=9, dpi=170)
