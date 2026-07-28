@@ -4,10 +4,11 @@
 #   1. RESOLUTION   — spatial-CV R2 vs aggregation (0.1 / 0.5 / 1 / 2 deg) -> why 1 deg
 #   2. TRANSFORM    — raw vs log / logit / sqrt response -> why no transform
 #   3. SPATIAL TERM — adding lon/lat (+ continent) -> it erases the ecological signal
-# Reads TRUNK_STACK (predictor_stack.tif). Writes CSVs to outputs/model1/.
+# Reads the predictor stack (path in R/config.R). Writes CSVs to outputs/model1/.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
-STACK <- Sys.getenv("TRUNK_STACK", "predictor_stack.tif")
+source("R/config.R")
+STACK <- paths$predictor_stack
 outdir <- file.path("outputs","model1"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
 ENV <- c("vpi_mean","cold_mean","dry_mean","height"); HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV,HERB); TARGET <- "trunkrichness"

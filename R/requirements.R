@@ -1,5 +1,4 @@
 # requirements.R — install the R packages the pipeline uses
-# (reconciled against actual library()/:: usage across R/; CatBoost installed separately)
 required_packages <- c(
   "here", "terra", "sf", "dplyr", "tidyr", "purrr", "readr",
   "ggplot2", "viridis", "patchwork", "scales", "tibble"

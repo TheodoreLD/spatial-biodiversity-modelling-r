@@ -20,10 +20,9 @@
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
 set.seed(123)
 
-# ---- paths (self-contained) -------------------------------------------------
-# Point TRUNK_STACK at the Dryad predictor stack (output/Raster_model/predictor_stack.tif)
-# or drop that file next to this script. Outputs are written to ./outputs.
-STACK  <- Sys.getenv("TRUNK_STACK", unset = "predictor_stack.tif")
+# ---- paths (from R/config.R) ------------------------------------------------
+source("R/config.R")
+STACK  <- paths$predictor_stack   # outputs/raster_model/predictor_stack.tif (built by 04)
 outdir <- file.path("outputs","model1"); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")

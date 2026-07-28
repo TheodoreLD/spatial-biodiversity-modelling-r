@@ -3,15 +3,16 @@
 # bias robustness; companion to 05_model1.R). Drop a fraction of the 74 mapped species,
 # re-derive relative richness (S_subset / W), aggregate to 1 deg, refit CatBoost, and
 # record whether the ALE shapes and the spatial-CV R2 stay stable.
-# Reads TRUNK_STACK, TRUNK_ABS (Absolute_Richness_Tot.tif), TRUNK_REL
-# (Relative_Richness_Tot.tif), TRUNK_RANGES (folder of the 74 per-species .gpkg).
+# Reads (paths in R/config.R): the predictor stack, the absolute + relative Tot
+# richness rasters, and the folder of the 74 per-species .gpkg ranges.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr); library(ggplot2) })
 set.seed(1)
-STACK <- Sys.getenv("TRUNK_STACK","predictor_stack.tif")
-ABS <- Sys.getenv("TRUNK_ABS","Absolute_Richness_Tot.tif")
-REL <- Sys.getenv("TRUNK_REL","Relative_Richness_Tot.tif")
-RANGES <- Sys.getenv("TRUNK_RANGES","SpeciesTotal")
+source("R/config.R")
+STACK  <- paths$predictor_stack
+ABS    <- paths$abs_richness
+REL    <- paths$rel_richness
+RANGES <- paths$spiny_ranges
 outdir <- file.path("outputs","model1"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
 ENV <- c("vpi_mean","cold_mean","dry_mean","height"); HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV,HERB); TARGET <- "trunkrichness"

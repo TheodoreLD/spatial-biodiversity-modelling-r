@@ -2,7 +2,7 @@
 # 04_data_preparation.R
 # Prepare predictor and mammal clade richness stacks for downstream modeling.
 # Writes the canonical stacks (predictor_stack.tif / Clade_richness_stack.tif) that
-# 05_model1.R and 06_model2.R read via TRUNK_STACK / TRUNK_CLADE.
+# 05_model1.R and 06_model2.R read (paths defined in R/config.R).
 # =============================================================================
 
 suppressPackageStartupMessages({

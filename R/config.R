@@ -34,5 +34,15 @@ paths <- list(
   ecoregion_mammal = here('outputs', 'ecoregion_mammal'),
   raster_model   = here('outputs', 'raster_model'),
   model1         = here('outputs', 'model1'),
-  model2         = here('outputs', 'model2')
+  model2         = here('outputs', 'model2'),
+
+  # derived inputs consumed by the descriptive step (02) and the models (05/06);
+  # built by 01/04, or repoint these at a Dryad download.
+  predictor_stack = here('outputs', 'raster_model', 'predictor_stack.tif'),
+  clade_stack     = here('outputs', 'raster_model', 'Clade_richness_stack.tif'),
+  abs_richness    = here('outputs', 'biogeography', 'rasters', 'Absolute_Richness_Tot.tif'),
+  rel_richness    = here('outputs', 'biogeography', 'rasters', 'Relative_Richness_Tot.tif'),
+  ecoregions      = here('data', 'raw', 'Ecoregion', 'Ecoregions2017.shp'),
+  spiny_ranges    = here('data', 'raw', 'Range_spiny_species', 'SpeciesTotal'),
+  borders         = here('data', 'assets', 'world_borders.geojson')
 )

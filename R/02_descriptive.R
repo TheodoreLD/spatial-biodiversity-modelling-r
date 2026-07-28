@@ -1,15 +1,16 @@
 # =============================================================================
 # 02_descriptive.R — richness maps, biome & ecoregion distributions (block-bootstrap
 # CIs + rank-stability), and the Fig-3 composite. All R (ggplot).
-# Inputs via env vars: TRUNK_REL_DIR (folder with Absolute_/Relative_
-# Richness_*.tif), TRUNK_ECO (Ecoregions2017.shp), TRUNK_BORDERS (world_borders.geojson).
+# Inputs (paths from R/config.R): the Biogeography rasters folder (Absolute_/Relative_
+# Richness_*.tif), the Ecoregions2017 shapefile, and data/assets/world_borders.geojson.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(sf); library(dplyr); library(readr)
   library(ggplot2); library(patchwork); library(scales) })
+source("R/config.R")
 set.seed(0)
-RELD <- Sys.getenv("TRUNK_REL_DIR", ".")
-ECOSHP <- Sys.getenv("TRUNK_ECO", "Ecoregions2017.shp")
-BORD <- Sys.getenv("TRUNK_BORDERS", "")
+RELD   <- paths$biogeo_rasters   # folder with Relative_Richness_*.tif
+ECOSHP <- paths$ecoregions       # Ecoregions2017.shp
+BORD   <- paths$borders          # world_borders.geojson
 outdir <- file.path("outputs","descriptive"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
 theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
           plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30")))

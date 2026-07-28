@@ -7,14 +7,15 @@
 #   * environment-adjusted ALE slope (clade + 4 env covariates)
 #   * variance partitioning (unique clade vs shared with environment) + residual Moran
 # Honest spatial block-bootstrap CIs (7 deg blocks); R2 out-of-bag.
-# Inputs via env vars: TRUNK_STACK (predictor_stack.tif), TRUNK_CLADE
-# (Clade_richness_stack.tif), TRUNK_REL_DIR (folder with Relative_Richness_*.tif).
+# Inputs (paths in R/config.R): the predictor stack, the per-clade richness stack,
+# and the Biogeography rasters folder (Relative_Richness_*.tif).
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
+source("R/config.R")
 set.seed(0)
-PRED  <- Sys.getenv("TRUNK_STACK", "predictor_stack.tif")
-CLADE <- Sys.getenv("TRUNK_CLADE", "Clade_richness_stack.tif")
-RELD  <- Sys.getenv("TRUNK_REL_DIR", ".")
+PRED  <- paths$predictor_stack
+CLADE <- paths$clade_stack
+RELD  <- paths$biogeo_rasters
 outdir <- file.path("outputs","model2"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
 
 CLADES <- c("Pilosa","Cetartiodactyla","Diprotodontia","Primates","Rodentia",
