@@ -20,6 +20,9 @@ outdir <- file.path("outputs","model2"); dir.create(outdir, recursive=TRUE, show
 
 CLADES <- c("Pilosa","Cetartiodactyla","Diprotodontia","Primates","Rodentia",
             "Perissodactyla","Proboscidea","Cingulata","Litopterna","Notoungulata")
+# PHYLACINE labels even-toed ungulates "Cetartiodactyla"; cetaceans are excluded
+# (Terrestrial==1), so the analysed group is reported as Artiodactyla.
+DISP <- function(x) ifelse(x=="Cetartiodactyla", "Artiodactyla", x)
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
 CONTS <- c("Americas","Africa","Asia")
 B <- 50
@@ -88,14 +91,14 @@ for (cond in names(tables)){ tab <- tables[[cond]]
           r2m <- c(r2m, r2(y[moob], catboost.predict(mono, Xo))) } }
       if (!length(slopes)) next
       if (!length(r2u)) r2u <- NA_real_; if (!length(r2m)) r2m <- NA_real_
-      ri <- ri+1; rows[[ri]] <- data.frame(condition=cond, continent=cont, clade=cl, n=nrow(sub),
+      ri <- ri+1; rows[[ri]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl), n=nrow(sub),
         n_present=sum(x>0), slope=mean(slopes), slope_lo=quantile(slopes,.025), slope_hi=quantile(slopes,.975),
         r2=mean(r2u,na.rm=TRUE), r2_lo=quantile(r2u,.025,na.rm=TRUE), r2_hi=quantile(r2u,.975,na.rm=TRUE),
         r2_mono=mean(r2m,na.rm=TRUE), r2_mono_lo=quantile(r2m,.025,na.rm=TRUE), r2_mono_hi=quantile(r2m,.975,na.rm=TRUE))
-      ci <- ci+1; curves[[ci]] <- data.frame(condition=cond, continent=cont, clade=cl, x=grid,
+      ci <- ci+1; curves[[ci]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl), x=grid,
         y=rowMeans(pmat), y_lo=apply(pmat,1,function(v) quantile(v,.025)), y_hi=apply(pmat,1,function(v) quantile(v,.975)))
       ym <- rowMeans(pmm); bf <- coef(lm(ym ~ zg))     # constrained curve + standardized linear fit
-      cci <- cci+1; ccur[[cci]] <- data.frame(condition=cond, continent=cont, clade=cl, x=grid, y=ym,
+      cci <- cci+1; ccur[[cci]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl), x=grid, y=ym,
         y_lo=apply(pmm,1,function(v) quantile(v,.025)), y_hi=apply(pmm,1,function(v) quantile(v,.975)), y_fit=bf[1]+bf[2]*zg) }
     message(sprintf("  %s/%s done", cond, cont)) } }
 res <- bind_rows(rows); write_csv(res, file.path(outdir,"model2_results.csv"))
@@ -116,7 +119,7 @@ for (cond in names(tables)){ tab <- tables[[cond]]
                              params=c(cbp, list(monotone_constraints=mono5)))
         s <- ale_slope(mod, X[m,,drop=FALSE], mn, sd); if (is.finite(s)) slp <- c(slp, s) }
       if (!length(slp)) next
-      ei <- ei+1; erows[[ei]] <- data.frame(condition=cond, continent=cont, clade=cl,
+      ei <- ei+1; erows[[ei]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
         slope_env=mean(slp), slope_env_lo=quantile(slp,.025), slope_env_hi=quantile(slp,.975)) }
     message(sprintf("  %s/%s done", cond, cont)) } }
 env <- bind_rows(erows) |> left_join(res[,c("condition","continent","clade","slope","slope_lo","slope_hi")],
@@ -145,7 +148,7 @@ for (cond in names(tables)){ tab <- tables[[cond]]
     fo <- foldsf(sub); act <- CLADES[sapply(CLADES, function(c) sum(sub[[c]]>0)>=30 && length(unique(sub[[c]]))>=5)]
     r2e <- cvfit(sub, ENV, fo)$r2
     for (cl in act){ rc <- cvfit(sub, cl, fo); rf <- cvfit(sub, c(ENV,cl), fo)
-      di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=cl,
+      di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
         r2_env=r2e, r2_clade=rc$r2, r2_full=rf$r2, unique_clade=rf$r2-r2e, shared=r2e+rc$r2-rf$r2,
         max_corr_env=max(abs(cor(sub[[cl]], sub[,ENV], method="spearman"))), resid_moran=moran(sub, rf$resid)) }
     message(sprintf("  %s/%s: %d clades", cond, cont, length(act))) } }
@@ -162,7 +165,7 @@ theme_set(theme_minimal(base_size=10) + theme(panel.grid.minor=element_blank(),
           strip.text=element_text(face="bold")))
 COL <- c(Americas="#E1812C",Africa="#3A7CA5",Asia="#4C9A4C")
 ED <- c("Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
-ORDER <- c("Cetartiodactyla","Perissodactyla","Rodentia","Primates","Proboscidea","Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
+ORDER <- c("Artiodactyla","Perissodactyla","Rodentia","Primates","Proboscidea","Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
 lab_ed <- function(c) ifelse(c %in% ED, paste0(c," (ED)"), c)
 res <- read_csv(file.path(outdir,"model2_results.csv"), show_col_types=FALSE)
 unc <- read_csv(file.path(outdir,"model2_curves.csv"), show_col_types=FALSE)
