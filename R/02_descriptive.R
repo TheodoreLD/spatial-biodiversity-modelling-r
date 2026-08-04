@@ -1,17 +1,18 @@
 # =============================================================================
 # 02_descriptive.R — richness maps, biome & ecoregion distributions (block-bootstrap
-# CIs + rank-stability), and the Fig-3 composite. All R (ggplot).
+# CIs + rank-stability), and the Fig-3 composite.
 # Inputs (paths from R/config.R): the Biogeography rasters folder (Absolute_/Relative_
 # Richness_*.tif), the Ecoregions2017 shapefile, and data/assets/world_borders.geojson.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(sf); library(dplyr); library(readr)
   library(ggplot2); library(patchwork); library(scales) })
 source("R/config.R")
+create_project_dirs()
 set.seed(0)
 RELD   <- paths$biogeo_rasters   # folder with Relative_Richness_*.tif
 ECOSHP <- paths$ecoregions       # Ecoregions2017.shp
 BORD   <- paths$borders          # world_borders.geojson
-outdir <- file.path("outputs","descriptive"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
+outdir <- paths$descriptive
 theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
           plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30")))
 BCOL <- c("Tropical & Subtropical Grasslands, Savannas & Shrublands"="#8c6d31","Flooded Grasslands & Savannas"="#7b3fa0",
@@ -49,9 +50,11 @@ eco <- st_read(ECOSHP, quiet=TRUE) |> st_make_valid()
 tmpl <- rast(ext(-180,180,-90,90), resolution=0.1, crs="EPSG:4326")
 eco_id <- rasterize(vect(eco), tmpl, field="ECO_ID")
 lut <- eco |> st_drop_geometry() |> distinct(ECO_ID, ECO_NAME, BIOME_NAME)
-n <- ncell(tmpl); col0 <- (seq_len(n)-1) %% 3600; row0 <- (seq_len(n)-1) %/% 3600
-lon <- -180 + (col0+0.5)*0.1; lat <- 90 - (row0+0.5)*0.1
-blk5 <- floor((lon+180)/5)*1000 + floor((lat+90)/5)
+# Cell -> lon/lat from the template itself, not from an assumed 3600-column grid.
+n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
+col0 <- (seq_len(n)-1) %% nc; row0 <- (seq_len(n)-1) %/% nc
+lon <- ev[["xmin"]] + (col0+0.5)*rs[1]; lat <- ev[["ymax"]] - (row0+0.5)*rs[2]
+blk5 <- floor((lon+180)/5)*1000 + floor((lat+90)/5)   # 5 deg block id for the bootstrap
 eid <- values(eco_id)[,1]
 
 boot <- function(v, b, nb=1000, seed=0){ set.seed(seed); ub <- unique(b); by <- split(v, b)

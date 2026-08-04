@@ -13,7 +13,7 @@ STACK  <- paths$predictor_stack
 ABS    <- paths$abs_richness
 REL    <- paths$rel_richness
 RANGES <- paths$spiny_ranges
-outdir <- file.path("outputs","model1"); dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
+outdir <- paths$model1; dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
 ENV <- c("vpi_mean","cold_mean","dry_mean","height"); HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV,HERB); TARGET <- "trunkrichness"
 NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season decid.", dry_mean="Dry-season decid.",
@@ -25,12 +25,17 @@ folds_of <- function(b,k=5,seed=1){ set.seed(seed); u<-unique(b); f<-setNames(sa
 cbp <- list(loss_function="RMSE", depth=3, l2_leaf_reg=30, learning_rate=.05, iterations=400, allow_writing_files=FALSE, logging_level="Silent")
 
 tmpl <- rast(ext(-180,180,-90,90), res=0.1, crs="EPSG:4326")
-ps <- rast(STACK); names(ps) <- c(TARGET, PREDS)
+ps <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
 Av <- values(rast(ABS))[,1]; Rv <- values(rast(REL))[,1]
 W <- ifelse(is.finite(Rv) & Rv>0, Av/Rv, NA)                 # woody richness denominator
 Pv <- values(ps[[PREDS]]); predfin <- rowSums(is.finite(Pv))==length(PREDS)
-n <- ncell(tmpl); col0 <- (seq_len(n)-1)%%3600; row0 <- (seq_len(n)-1)%/%3600
-lon <- -180+(col0+0.5)*0.1; lat <- 90-(row0+0.5)*0.1; Rb <- row0%/%10; Cb <- col0%/%10
+# Cell -> lon/lat and the 0.1 deg -> 1 deg index, taken from the template rather than
+# assuming a 3600-column grid.
+n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
+col0 <- (seq_len(n)-1)%%nc; row0 <- (seq_len(n)-1)%/%nc
+lon <- ev[["xmin"]]+(col0+0.5)*rs[1]; lat <- ev[["ymax"]]-(row0+0.5)*rs[2]
+AGG <- round(1/rs[1]); Rb <- row0%/%AGG; Cb <- col0%/%AGG
+MINSUB <- max(1, floor(0.10*AGG*AGG))
 
 gpkgs <- list.files(RANGES, "\\.gpkg$", full.names=TRUE)
 message(length(gpkgs)," species; rasterising presences")
@@ -41,7 +46,7 @@ build <- function(keep){ S <- integer(n); for (k in keep) S[pres[[k]]] <- S[pres
   m <- S>0 & is.finite(W) & predfin; rel <- rep(NA_real_,n); rel[m] <- S[m]/W[m]
   d <- data.frame(trunkrichness=rel[m], lon=lon[m], lat=lat[m], R=Rb[m], C=Cb[m]); d <- cbind(d, Pv[m,,drop=FALSE])
   d |> group_by(R,C) |> summarise(across(everything(), \(x) mean(x,na.rm=TRUE)), nn=n(), .groups="drop") |>
-    filter(nn>=10) |> select(-nn) |> as.data.frame() }
+    filter(nn>=MINSUB) |> select(-nn) |> as.data.frame() }
 fit <- function(d) catboost.train(catboost.load_pool(as.matrix(d[,PREDS]), label=d[[TARGET]]), NULL, params=cbp)
 ale1 <- function(m, X, j, q){ bi <- pmin(pmax(findInterval(X[,j], q[-c(1,length(q))]),0), length(q)-2); eff <- numeric(length(q)-1)
   for (k in seq_len(length(q)-1)){ mm <- bi==(k-1); if(!any(mm)) next; Xl<-X[mm,,drop=FALSE]; Xu<-X[mm,,drop=FALSE]; Xl[,j]<-q[k]; Xu[,j]<-q[k+1]

@@ -1,11 +1,6 @@
 # =============================================================================
 # 03_mammal_ecoregions.R
 # Present-natural large-herbivore species list per richest ecoregion / continent.
-#
-# FIXES vs original:
-#  - paths via config.R/here() and data/raw/... (consistent with 03/04);
-#  - output directory is created before writing (was: write to a dir that may
-#    not exist on a fresh clone -> error).
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -15,11 +10,9 @@ suppressPackageStartupMessages({
 source("R/config.R")
 create_project_dirs()
 
-traits_path <- require_file(
-  here::here("data", "raw", "Range_mammals", "Traits", "Trait_data.csv"), "PHYLACINE traits")
-ranges_nat  <- here::here("data", "raw", "Range_mammals", "Ranges", "Present_natural")
-ecoregions_path <- require_file(
-  here::here("data", "raw", "Ecoregion", "Ecoregions2017.shp"), "WWF ecoregions shapefile")
+traits_path     <- require_file(paths$mammal_traits, "PHYLACINE traits")
+ranges_nat      <- paths$mammal_ranges
+ecoregions_path <- require_file(paths$ecoregions, "WWF ecoregions shapefile")
 
 # ---- 1. Large terrestrial herbivorous mammals (>5 kg, plant-eating) ----------
 traits <- read_csv(traits_path, show_col_types = FALSE) |>
@@ -29,10 +22,40 @@ traits <- read_csv(traits_path, show_col_types = FALSE) |>
   filter(file.exists(raster_path))
 
 # ---- 2. Target ecoregions (richest relative spiny-trunk richness per continent)
+# Derived from the ranking that 02_descriptive.R writes, not hardcoded, so rerunning
+# the descriptive step with different data updates this one automatically. Continents
+# come from the Ecoregions2017 REALM field; Palearctic / Australasia / Oceania are not
+# analysed, matching the three continents modelled in 06_model2.R.
 eco <- st_read(ecoregions_path, quiet = TRUE) |> st_make_valid()
-target_ecos <- c("Beni savanna", "Cross-Niger transition forests",
-                 "Tonle Sap freshwater swamp forests")
-selected_ecos <- eco |> filter(ECO_NAME %in% target_ecos)
+if (!"REALM" %in% names(eco)) stop("Ecoregions shapefile has no REALM field", call. = FALSE)
+
+realm_to_continent <- function(r) {
+  r <- tolower(as.character(r))
+  ifelse(grepl("neotrop|nearctic", r), "Americas",
+  ifelse(grepl("afrotrop", r),         "Africa",
+  ifelse(grepl("indo.?malay", r),      "Asia", NA_character_)))
+}
+
+ranking_path <- require_file(
+  file.path(paths$descriptive, "ecoregion_summary_total.csv"),
+  "ecoregion ranking from 02_descriptive.R (run step 2 first)")
+
+target_ecos <- read_csv(ranking_path, show_col_types = FALSE) |>
+  left_join(eco |> st_drop_geometry() |> distinct(ECO_ID, REALM), by = "ECO_ID") |>
+  mutate(continent = realm_to_continent(REALM)) |>
+  filter(!is.na(continent)) |>
+  group_by(continent) |>
+  slice_max(mean, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(desc(mean))
+
+if (nrow(target_ecos) == 0)
+  stop("No ecoregion mapped to a modelled continent; check the REALM values: ",
+       paste(unique(eco$REALM), collapse = ", "), call. = FALSE)
+
+message("target ecoregions: ",
+        paste(sprintf("%s (%s)", target_ecos$ECO_NAME, target_ecos$continent), collapse = " | "))
+selected_ecos <- eco |> filter(ECO_NAME %in% target_ecos$ECO_NAME)
 
 # ---- 3. Reproject to match species rasters -----------------------------------
 ref_rast      <- rast(traits$raster_path[1])

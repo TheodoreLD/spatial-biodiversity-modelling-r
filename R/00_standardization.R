@@ -8,6 +8,11 @@
 # NB TNRS queries a web service -> this step needs an internet connection.
 # Input : data/spiny_trunk_species.xlsx  (column `Species`)   [paths$species_xlsx]
 # Output: data/processed/species_standardized.csv             [paths$data_processed]
+#
+# SCOPE: this step reports and documents the nomenclature; it does not feed the spatial
+# pipeline. 01_biogeography.R reads the per-species range files by filename, so the
+# analysis uses the names as compiled in the xlsx. The CSV written here is the record
+# that those names resolve cleanly against WCVP/WFO, for the manuscript and reviewers.
 # =============================================================================
 suppressPackageStartupMessages({
   library(readxl); library(dplyr); library(stringr); library(readr); library(TNRS)

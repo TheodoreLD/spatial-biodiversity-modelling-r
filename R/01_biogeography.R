@@ -1,19 +1,15 @@
 # =============================================================================
 # 01_biogeography.R — absolute & relative spiny-trunk richness rasters.
 # Rasterises the species ranges (total / prickly / thorny) and divides by global
-# woody-plant richness. Maps and the biome/ecoregion distributions are produced
-# downstream by 02_descriptive.R (with country borders and block-bootstrap CIs) —
-# they are NOT duplicated here.
+# woody-plant richness.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(dplyr); library(readr) })
 source("R/config.R")
 create_project_dirs()
 
-# subset name -> species-range subfolder (unzip Range_spiny_species/TreeSpecies.zip here)
+# subset name -> species-range subfolder under paths$spiny_ranges_dir
 subsets <- c(Tot = "SpeciesTotal", Prickly = "SpeciesPrickly", Thorny = "SpeciesThorny")
-predictions_path <- require_file(
-  here::here("data", "raw", "Map_global_plant_richness", "sr_Ensemble_Prediction_7774_LongLat.RData"),
-  "global woody-plant richness prediction")
+predictions_path <- require_file(paths$woody_richness, "global woody-plant richness prediction")
 
 # 0.1 degree WGS84 template + global woody-plant richness (object name: predictions_grid)
 template <- rast(ext(-180, 180, -90, 90), res = 0.1, crs = "EPSG:4326"); values(template) <- 0
@@ -22,7 +18,7 @@ nat_rast <- rasterize(vect(predictions_grid), template, field = "value", fun = "
 
 for (nm in names(subsets)) {
   message("=== Subset: ", nm, " ===")
-  range_dir <- here::here("data", "raw", "Range_spiny_species", subsets[[nm]])
+  range_dir <- file.path(paths$spiny_ranges_dir, subsets[[nm]])
   if (!dir.exists(range_dir)) { warning("Missing range dir: ", range_dir, " (skipped)"); next }
   gpkg_list <- list.files(range_dir, "\\.gpkg$", full.names = TRUE)
   if (length(gpkg_list) == 0) { warning("No .gpkg in ", range_dir, " (skipped)"); next }

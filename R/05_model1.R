@@ -1,21 +1,23 @@
 # =============================================================================
-# 05_model1.R — FINAL validated Model 1, native CatBoost.
+# 05_model1.R — Model 1, native CatBoost.
 # Response = relative spiny-trunk richness (bounded proportion).
 #
-# Design decisions (verified, not assumed):
-#   * analysis unit = 1 deg (aggregated from 0.1 deg), chosen by the resolution sweep.
-#   * tuning uses a 1-SE rule so the simplest adequate model wins (-> depth 3, l2 30).
-#   * loss = RMSE. Verified second-order here (RMSE .373 / MAE .349 / Quantile .349
-#     / CrossEntropy .377) -> NO response transform, no loss search.
-#     NB CatBoost regression does not accept CrossEntropy (classifier-only loss).
-#   * GOAL: characterise the environment where spiny-trunk richness is highest via ALE,
-#     NOT rank predictor importance (no importance ranking is computed).
-#   * both megafauna metrics kept (rho = 0.84 at 1 deg) and read as one axis; predictor
-#     redundancy is disclosed by correlation + VIF + concurvity, not ranked.
-#   * NO spatial term: tested, it erases the ecological signal (see sensitivity tests).
-#   * ALE (not PDP) for effect shapes — stays valid under correlated predictors.
-#   * ONE block-bootstrap ensemble provides the ALE CIs.
-#   * early stopping on a spatially separated eval subset of the training blocks.
+# GOAL: characterise the environmental conditions where spiny-trunk richness is high,
+# via ALE response shapes. Deliberately NOT a predictor-importance ranking — the two
+# megafauna metrics are near-collinear (see predictor_concurvity.csv) and are read as
+# one axis, with the redundancy disclosed rather than resolved by ranking.
+#
+# Design decisions, each backed by a companion output:
+#   * analysis unit 1 deg, aggregated from 0.1 deg  -> resolution_sweep.csv
+#   * no response transform                          -> transform_test.csv
+#   * no spatial term                                -> spatial_term_test.csv
+#   * tuning by the 1-SE rule (simplest adequate model wins)
+#   * block size derived from the residual correlogram, not assumed
+#   * ALE (not PDP), which stays valid under correlated predictors
+#   * one block-bootstrap ensemble supplies the ALE CIs
+#   * early stopping on a spatially separated subset of the training blocks
+# (The first three are produced by 05_model1_sensitivity.R; species-drop robustness
+#  by 05_model1_jackknife.R.)
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr) })
 set.seed(123)
@@ -23,7 +25,7 @@ set.seed(123)
 # ---- paths (from R/config.R) ------------------------------------------------
 source("R/config.R")
 STACK  <- paths$predictor_stack   # outputs/raster_model/predictor_stack.tif (built by 04)
-outdir <- file.path("outputs","model1"); dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+outdir <- paths$model1; dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
 HERB <- c("mammal_richness","consumption")   # present-natural megafauna >5 kg (PHYLACINE Mass.g>5000)
@@ -32,18 +34,23 @@ NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
           dry_mean="Dry-season deciduousness", height="Vegetation height",
           mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
 
-stopifnot(file.exists(STACK))
-ps <- rast(STACK); names(ps) <- c(TARGET, PREDS)
+ps <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
 
 # ---------------- helpers ----------------
+# R² of predictions yh against observed y
 r2 <- function(y,yh) 1 - sum((y-yh)^2)/sum((y-mean(y))^2)
+# assign each cell a spatial-block ID (deg-degree lon/lat tiles)
 blk <- function(lon,lat,deg) floor((lon+180)/deg)*100000 + floor((lat+90)/deg)
+# randomly assign each block to one of k CV folds (reproducible via seed)
 folds_of <- function(b,k=5,seed=0){ set.seed(seed); u<-unique(b); f<-setNames(sample(0:(k-1),length(u),TRUE),u); as.integer(f[as.character(b)]) }
+# great-circle (haversine) distance in km between two lon/lat points
 hav <- function(lo1,la1,lo2,la2){ R<-6371; a<-sin((la2-la1)*pi/360)^2+cos(la1*pi/180)*cos(la2*pi/180)*sin((lo2-lo1)*pi/360)^2; 2*R*asin(sqrt(a)) }
+# shared CatBoost settings: RMSE loss, 0.8 row/feature subsampling, silent
 BASE <- list(loss_function="RMSE", rsm=0.8, subsample=0.8, allow_writing_files=FALSE, logging_level="Silent")
+# build a CatBoost data pool from the predictor columns, with or without a label
 pool <- function(d, lab=NULL) if (is.null(lab)) catboost.load_pool(as.matrix(d[,PREDS])) else
   catboost.load_pool(as.matrix(d[,PREDS]), label=lab)
-# fit with early stopping on a SPATIALLY separated 20% of the training blocks
+# train CatBoost with early stopping on a spatially-separated ~20% of blocks held out as the eval set
 fit_es <- function(d, b, par, seed=0){
   set.seed(seed); u <- unique(b); ev <- sample(u, max(1, floor(.2*length(u)))); m <- b %in% ev
   if (sum(m) < 50 || sum(!m) < 50)
@@ -51,6 +58,7 @@ fit_es <- function(d, b, par, seed=0){
   catboost.train(pool(d[!m,], d[[TARGET]][!m]), pool(d[m,], d[[TARGET]][m]),
                  params=c(BASE, par, list(iterations=1000, od_type="Iter", od_wait=50, use_best_model=TRUE)))
 }
+# predict with model m on data d
 pr <- function(m,d) catboost.predict(m, pool(d))
 
 # =============================================================================
@@ -59,9 +67,9 @@ pr <- function(m,d) catboost.predict(m, pool(d))
 message("0. INPUTS + COLLINEARITY")
 df0 <- as.data.frame(ps, xy=TRUE, na.rm=TRUE) |> rename(longitude=x, latitude=y)
 # ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) -------------------
-# Chosen by the resolution sweep: 1 deg maximises spatial-CV R2 (0.456 vs 0.388 at
-# 0.1 deg) and cuts n from 404k pseudo-replicates to ~4.9k, far more defensible
-# given only 74 mapped species ranges. 2 deg over-coarsens (R2 collapses).
+# Chosen by the resolution sweep (resolution_sweep.csv): 1 deg maximises spatial-CV R2
+# and cuts n from ~404k pseudo-replicates to ~4.9k, which is far more defensible given
+# only 74 mapped species ranges. 2 deg over-coarsens and R2 drops.
 AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
 if (AGG > 1) {
   df <- df0 |>
@@ -76,10 +84,12 @@ message(sprintf("  analysis unit %.1f deg -> %d cells (from %d at 0.1 deg; still
                 0.1*AGG, nrow(df), nrow(df0)))
 write_csv(as.data.frame(t(sapply(df[c(TARGET,PREDS)], summary))) |> tibble::rownames_to_column("var"),
           file.path(outdir,"input_summary.csv"))
+# Spearman rank-correlation matrix among predictors
 cc <- round(cor(df[PREDS], method="spearman"),3); rownames(cc) <- NAME[PREDS]; colnames(cc) <- NAME[PREDS]
 write_csv(as.data.frame(cc) |> tibble::rownames_to_column("var"), file.path(outdir,"predictor_correlation.csv"))
+# VIF: regress each predictor linearly on all the others → 1/(1−R²), the degree of linear multicollinearity
 vif <- sapply(PREDS, function(p) 1/(1-summary(lm(as.formula(paste(p,"~",paste(setdiff(PREDS,p),collapse="+"))), df))$r.squared))
-# concurvity: nonlinear analogue of VIF — 3-fold CV R2 of predicting each predictor from the OTHERS
+# concurvity: 3-fold CV R² of predicting each predictor from the others with CatBoost — the nonlinear analogue of VIF
 Z <- scale(df[PREDS]); set.seed(0); fc <- sample(0:2, nrow(df), TRUE)
 concurv <- sapply(PREDS, function(p){
   oth <- setdiff(PREDS,p); oo <- rep(NA_real_, nrow(df))
@@ -105,8 +115,18 @@ for (f in 0:4){ tr <- f5!=f; oof0[f5==f] <- pr(fit_es(df[tr,], b5[tr], list(dept
 res0 <- df[[TARGET]] - oof0
 i <- sample(nrow(df), min(2500, nrow(df))); z <- scale(res0[i])[,1]
 D <- outer(seq_along(i), seq_along(i), function(a,b) hav(df$longitude[i][a], df$latitude[i][a], df$longitude[i][b], df$latitude[i][b]))
-bins <- seq(0,3000,150); mI <- sapply(seq_len(length(bins)-1), function(k){ m <- D>=bins[k] & D<bins[k+1]; mean(outer(z,z)[m], na.rm=TRUE) })
-range_km <- ((bins[-1]+bins[-length(bins)])/2)[which(mI<0.1)[1]]
+bins <- seq(0,3000,150); mids <- (bins[-1]+bins[-length(bins)])/2
+# Moran-like correlogram: mean product of standardized residuals per distance band.
+# D > 0 drops the self-pairs, which contribute z^2 (mean 1) and would otherwise
+# inflate the first band (0.80 vs 0.75 here, ~29% of that band's pairs).
+correlogram <- function(z, D, bins) sapply(seq_len(length(bins)-1), function(k){
+  m <- D>=bins[k] & D<bins[k+1] & D>0
+  if (!any(m)) NA_real_ else mean(outer(z,z)[m], na.rm=TRUE) })
+mI <- correlogram(z, D, bins)
+hit <- which(mI < 0.1)[1]
+if (is.na(hit)) { warning("residual correlogram never drops below 0.1 within ", max(bins),
+                          " km; falling back to the widest band", call.=FALSE)
+                  range_km <- max(mids) } else range_km <- mids[hit]
 BLOCK <- max(5, ceiling(range_km/111))
 message(sprintf("  residual range ~%.0f km -> block = %d deg", range_km, BLOCK))
 bid <- blk(df$longitude, df$latitude, BLOCK)
@@ -115,10 +135,10 @@ bid <- blk(df$longitude, df$latitude, BLOCK)
 # 2. TUNING (spatial CV + early stopping)
 # =============================================================================
 message("2. TUNING")
-# 1-SE rule: among configurations whose spatial-CV RMSE is within one standard
-# error of the best, take the SIMPLEST (shallowest, most regularised). Deeper trees
-# buy a little CV R2 but a much larger train-CV gap, which is not defensible with
-# only ~74 independent species ranges.
+# 1-SE rule: among configurations whose spatial-CV RMSE is within one standard error
+# of the best, take the SIMPLEST (shallowest, most regularised). Deeper trees buy a
+# little CV R2 but a much larger train-CV gap, which is not defensible with only
+# ~74 independent species ranges.
 GRID <- unlist(lapply(c(3,4,6,8), function(dp) lapply(c(3,10,30), function(l2)
           list(depth=dp, learning_rate=.05, l2_leaf_reg=l2))), recursive=FALSE)
 fT <- folds_of(bid,5,1)
@@ -152,10 +172,31 @@ sens <- do.call(rbind, lapply(c(max(3,BLOCK-3), BLOCK, BLOCK+3), function(deg){
   v <- sapply(0:4, function(f){ tr<-fo!=f; te<-fo==f; r2(df[[TARGET]][te], pr(fit_es(df[tr,], bb[tr], best), df[te,])) })
   data.frame(block_deg=deg, r2=round(mean(v),3), sd=round(sd(v),3)) }))
 write_csv(sens, file.path(outdir,"blocksize_sensitivity.csv"))
-write_csv(data.frame(spatial_cv_r2=mean(fr), sd=sd(fr), lo=quantile(fr,.025), hi=quantile(fr,.975),
-                     train_r2=mean(trr), rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE)),
-                     note="random-CV reference (verified) = 0.634, SD 0.001"),
+# Random (non-spatial) 5-fold CV reference, computed here rather than quoted from a
+# previous run: the gap against the spatial-CV R2 is the cost of honouring spatial
+# autocorrelation, and is the number to cite when arguing that random CV is optimistic.
+frand <- c()
+for (rr in 1:3){ set.seed(200+rr); fo <- sample(rep_len(0:4, nrow(df)))
+  for (f in 0:4){ tr <- fo!=f; te <- fo==f
+    frand <- c(frand, r2(df[[TARGET]][te], pr(fit_es(df[tr,], bid[tr], best, seed=rr), df[te,]))) } }
+# pooled_oof_r2 is the headline number: every out-of-fold prediction scored ONCE
+# against the global mean. Prefer it to spatial_cv_r2 (the mean of per-fold R2).
+# Per-fold R2 uses each fold's own variance as its denominator, so a fold whose
+# held-out blocks happen to cover a homogeneous region scores badly even when its
+# RMSE is low -- here RMSE varies only ~1.2x across folds while sd(y) varies ~1.4x
+# and correlates 0.85 with fold R2. The fold spread is therefore mostly a
+# denominator artefact, NOT evidence that the model fails in particular regions.
+ok_oof <- is.finite(oof)
+# NB fold_r2_p2.5 / p97.5 are the spread of the 15 individual fold R2 values,
+# NOT a confidence interval on the mean.
+write_csv(data.frame(pooled_oof_r2=r2(df[[TARGET]][ok_oof], oof[ok_oof]),
+                     spatial_cv_r2=mean(fr), spatial_cv_sd=sd(fr), spatial_cv_se=sd(fr)/sqrt(length(fr)),
+                     fold_r2_p2.5=unname(quantile(fr,.025)), fold_r2_p97.5=unname(quantile(fr,.975)),
+                     random_cv_r2=mean(frand), random_cv_sd=sd(frand),
+                     train_r2=mean(trr), rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE))),
           file.path(outdir,"performance_summary.csv"))
+message(sprintf("  pooled OOF R2=%.3f (the number to report)", r2(df[[TARGET]][ok_oof], oof[ok_oof])))
+message(sprintf("  random-CV reference R2=%.3f (SD %.3f)", mean(frand), sd(frand)))
 message(sprintf("  spatial-CV R2=%.3f (SD %.3f) | train %.3f | gap %.3f", mean(fr), sd(fr), mean(trr), mean(trr)-mean(fr)))
 
 # =============================================================================
@@ -164,19 +205,16 @@ message(sprintf("  spatial-CV R2=%.3f (SD %.3f) | train %.3f | gap %.3f", mean(f
 message("4. DIAGNOSTICS")
 resid <- df[[TARGET]] - oof
 z <- scale(resid[i])[,1]
-mIr <- sapply(seq_len(length(bins)-1), function(k){ m <- D>=bins[k] & D<bins[k+1]; mean(outer(z,z)[m], na.rm=TRUE) })
-write_csv(tibble::tibble(dist_km=(bins[-1]+bins[-length(bins)])/2, moranI_residual=mIr),
+mIr <- correlogram(z, D, bins)
+write_csv(tibble::tibble(dist_km=mids, moranI_residual=mIr),
           file.path(outdir,"residual_correlogram.csv"))
 message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial folds", mIr[1]))
-
-# NB: no variable-importance ranking. The aim is to CHARACTERISE the environment where
-# spiny-trunk richness is highest (ALE shapes below), not to rank predictors. Predictor
-# redundancy is disclosed by the correlation/VIF/concurvity outputs in section 0.
 
 # =============================================================================
 # 5. BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs
 # =============================================================================
 message("5. ENSEMBLE (ALE CIs)")
+set.seed(5)   # section-level seed: the ensemble does not depend on the RNG stream above
 NB <- 25; ub <- unique(bid)
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
@@ -217,7 +255,7 @@ message(sprintf("  thinned spatial-CV R2 = %.3f", mean(thin)))
 write_csv(data.frame(thinned_cv_r2=mean(thin)), file.path(outdir,"thinning.csv"))
 
 # =============================================================================
-# 7. FIGURES (ggplot; despined)
+# 7. FIGURES
 # =============================================================================
 message("7. FIGURES")
 suppressPackageStartupMessages({ library(ggplot2); library(patchwork) })
@@ -251,7 +289,7 @@ p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_a
 cal <- dobs; cal$b <- cut(cal$p, quantile(cal$p, seq(0,1,.1)), include.lowest=TRUE); cal <- aggregate(cbind(o,p)~b, cal, mean)
 p2 <- ggplot(cal, aes(p,o)) + geom_line(colour=BLUE) + geom_point(colour=BLUE) + geom_abline(linetype=2) + labs(x="Predicted (decile)",y="Observed",title="Calibration")
 p3 <- ggplot(tibble::tibble(s=resid[ok]), aes(sample=s)) + stat_qq(size=.4,colour=BLUE) + stat_qq_line(linetype=2) + labs(x="Theoretical",y="Ordered",title="Residual QQ")
-cg <- tibble::tibble(dist_km=(bins[-1]+bins[-length(bins)])/2, moranI=mIr)
+cg <- tibble::tibble(dist_km=mids, moranI=mIr)
 p4 <- ggplot(cg, aes(dist_km,moranI)) + geom_line(colour="#c44") + geom_point(colour="#c44",size=1) + geom_hline(yintercept=.1,linetype=3,colour="grey") + coord_cartesian(xlim=c(0,2000)) + labs(x="Distance (km)",y="Moran's I",title="Residual autocorrelation")
 ggsave(file.path(outdir,"M1_diagnostics.png"), p1+p2+p3+p4+plot_layout(nrow=1), width=19, height=4.3, dpi=170)
 message("DONE -> ", outdir)
