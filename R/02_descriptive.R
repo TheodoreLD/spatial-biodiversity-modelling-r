@@ -62,14 +62,16 @@ mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
       guide=guide_colourbar(barwidth=unit(.38,"cm"), barheight=unit(if (inset) 4.4 else 5.4,"cm"))) +
     coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
     theme_void(base_size=11) +
-    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=0,b=3)),
+    # theme_void leaves no axis strip, so the map panel starts immediately below the
+    # title: without a bottom margin here the Arctic coastlines run into the title.
+    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=14)),
           plot.title.position="plot",
           legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
   if (inset)
     g + theme(legend.position="inside", legend.position.inside=c(0.075, 0.33),
               legend.justification=c(0.5, 0.5), legend.direction="vertical",
               legend.background=element_rect(fill=alpha("white", .75), colour=NA),
-              legend.margin=margin(3,4,3,4), plot.margin=margin(0,2,2,2))
+              legend.margin=margin(3,4,3,4), plot.margin=margin(2,2,2,2))
   else
     g + theme(legend.position="right", legend.justification="center",
               legend.margin=margin(l=4), plot.margin=margin(2,2,2,2))
@@ -178,8 +180,8 @@ for (cond in names(S)){
   # (~450px), leaving a gap under the "A)" title and pushing the frame off centre.
   # Panel A's height is set just above what the width-limited map needs, so the map
   # spans the full width with little vertical slack left for it to centre in.
-  comp <- free(pa) / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1.05,1.03))
+  comp <- free(pa) / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1.08,1.03))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,
-         width=15, height=12.7, dpi=170, bg="white")
+         width=15, height=12.9, dpi=170, bg="white")
 }
 message("DONE -> ", outdir)
