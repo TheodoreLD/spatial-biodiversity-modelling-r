@@ -47,22 +47,32 @@ EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
 # ---- borders + maps ----------------------------------------------------------
 message("maps")
 borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
-# Cropped to the latitudes that actually carry data (-35 to 48 deg): the former
-# -58/84 band left ~41% of the panel empty and squeezed the map. Longitude is
-# trimmed at -130 for the same reason (westernmost data is -112).
-mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE){
+# Full land extent (-58/84, -180/180) so no country is sliced at the poles or the
+# dateline. `inset` puts the colourbar inside the map, in the empty South Pacific:
+# outside on the right it consumes panel width, which shifts the map frame off centre
+# relative to panels B/C below. Used for the composite; the standalone maps, which
+# have nothing to align with, keep the colourbar on the right.
+mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
   r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
   vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
-  ggplot() + geom_raster(data=d, aes(x,y,fill=v)) + geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
+  g <- ggplot() + geom_raster(data=d, aes(x,y,fill=v)) +
+    geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
     scale_fill_viridis_c(option=pal, limits=c(min(d$v,na.rm=TRUE),vmax), oob=squish, name=clab,
       labels=if (scale_1e3) label_number(scale=1e3) else waiver(),
-      guide=guide_colourbar(barwidth=unit(.42,"cm"), barheight=unit(5.4,"cm"))) +
-    coord_sf(xlim=c(-130,180), ylim=c(-40,52), expand=FALSE) + labs(title=ttl) +
+      guide=guide_colourbar(barwidth=unit(.38,"cm"), barheight=unit(if (inset) 4.4 else 5.4,"cm"))) +
+    coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
     theme_void(base_size=11) +
-    theme(plot.title=element_text(face="bold", size=12, hjust=0), plot.title.position="plot",
-          legend.position="right", legend.justification="center",
-          legend.title=element_text(size=9, hjust=0), legend.text=element_text(size=8),
-          legend.margin=margin(l=6), plot.margin=margin(2,2,2,2))
+    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=0,b=3)),
+          plot.title.position="plot",
+          legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
+  if (inset)
+    g + theme(legend.position="inside", legend.position.inside=c(0.075, 0.33),
+              legend.justification=c(0.5, 0.5), legend.direction="vertical",
+              legend.background=element_rect(fill=alpha("white", .75), colour=NA),
+              legend.margin=margin(3,4,3,4), plot.margin=margin(0,2,2,2))
+  else
+    g + theme(legend.position="right", legend.justification="center",
+              legend.margin=margin(l=4), plot.margin=margin(2,2,2,2))
 }
 maps <- list(
   c("Absolute_Richness_Tot.tif","Absolute richness of spiny-trunk species (0.1°)","Species richness","D","MAP_absolute_richness"),
@@ -160,11 +170,16 @@ for (cond in names(S)){
          width=11, height=9, dpi=170)
   # composite: A map, B biome (the key), C ecoregions (no legend of its own)
   pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (0.1°)", CLAB[[cond]]),
-               expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE)
+               expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
   pb <- mk_biome(bio, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
-  comp <- pa / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1,1.55))
+  # free(): patchwork aligns plot panels down a column, so without it the map is
+  # indented to start where panel B's panel starts -- i.e. after B's long biome labels
+  # (~450px), leaving a gap under the "A)" title and pushing the frame off centre.
+  # Panel A's height is set just above what the width-limited map needs, so the map
+  # spans the full width with little vertical slack left for it to centre in.
+  comp <- free(pa) / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1.05,1.03))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,
-         width=15, height=10.8, dpi=170, bg="white")
+         width=15, height=12.7, dpi=170, bg="white")
 }
 message("DONE -> ", outdir)
