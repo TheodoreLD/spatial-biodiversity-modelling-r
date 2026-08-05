@@ -63,8 +63,8 @@ mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
     coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
     theme_void(base_size=11) +
     # theme_void leaves no axis strip, so the map panel starts immediately below the
-    # title: without a bottom margin here the Arctic coastlines run into the title.
-    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=14)),
+    # title; this bottom margin keeps the Arctic coastlines off the title text.
+    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=10)),
           plot.title.position="plot",
           legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
   if (inset)
@@ -175,13 +175,17 @@ for (cond in names(S)){
                expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
   pb <- mk_biome(bio, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
-  # free(): patchwork aligns plot panels down a column, so without it the map is
-  # indented to start where panel B's panel starts -- i.e. after B's long biome labels
-  # (~450px), leaving a gap under the "A)" title and pushing the frame off centre.
-  # Panel A's height is set just above what the width-limited map needs, so the map
-  # spans the full width with little vertical slack left for it to centre in.
-  comp <- free(pa) / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1.08,1.03))
+  # free(side="l") releases ONLY the left edge. patchwork otherwise aligns plot panels
+  # down a column, indenting the map to start where panel B's panel starts -- i.e.
+  # after B's long biome labels (~450px). Freeing every side also lets the panel
+  # expand upwards into the space the title reserves, which silently puts the Arctic
+  # coastlines through the title text however large the title margin is; keeping the
+  # top aligned prevents that. Panel A's height is then set so the map is
+  # width-limited (spans the full width) rather than height-limited (shrinks and
+  # re-centres, reopening a gap on the left).
+  comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.15))) +
+          plot_layout(heights=c(1.12,1.03))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,
-         width=15, height=12.9, dpi=170, bg="white")
+         width=15, height=13.0, dpi=170, bg="white")
 }
 message("DONE -> ", outdir)
