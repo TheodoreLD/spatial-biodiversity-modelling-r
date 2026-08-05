@@ -14,11 +14,32 @@ ECOSHP <- paths$ecoregions       # Ecoregions2017.shp
 BORD   <- paths$borders          # world_borders.geojson
 outdir <- paths$descriptive
 theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
-          plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30")))
-BCOL <- c("Tropical & Subtropical Grasslands, Savannas & Shrublands"="#8c6d31","Flooded Grasslands & Savannas"="#7b3fa0",
-          "Tropical & Subtropical Dry Broadleaf Forests"="#c0392b","Tropical & Subtropical Moist Broadleaf Forests"="#2e8b57",
-          "Deserts & Xeric Shrublands"="#d4b106","Mangroves"="#2c6fbb")
-bcol <- function(b) ifelse(b %in% names(BCOL), BCOL[b], "#888888")
+          plot.title=element_text(face="bold",size=11), plot.title.position="plot",
+          axis.line=element_line(colour="grey30")))
+# Full WWF biome palette so nothing that reaches a figure falls back to grey.
+# Warm = dry/open, green = forest, purple = flooded, blue = mangrove; temperate
+# tones are lighter than their tropical counterpart.
+BCOL <- c(
+  "Tropical & Subtropical Moist Broadleaf Forests"           = "#2e8b57",
+  "Tropical & Subtropical Dry Broadleaf Forests"             = "#c0392b",
+  "Tropical & Subtropical Coniferous Forests"                = "#5fa8a0",
+  "Temperate Broadleaf & Mixed Forests"                      = "#7fb069",
+  "Temperate Conifer Forests"                                = "#35748c",
+  "Boreal Forests/Taiga"                                     = "#4a6f8a",
+  "Tropical & Subtropical Grasslands, Savannas & Shrublands" = "#8c6d31",
+  "Temperate Grasslands, Savannas & Shrublands"              = "#c98c5a",
+  "Flooded Grasslands & Savannas"                            = "#7b3fa0",
+  "Montane Grasslands & Shrublands"                          = "#d1738f",
+  "Tundra"                                                   = "#9db4c0",
+  "Mediterranean Forests, Woodlands & Scrub"                 = "#e08a3c",
+  "Deserts & Xeric Shrublands"                               = "#d4b106",
+  "Mangroves"                                                = "#2c6fbb")
+GREY <- "#9e9e9e"
+bcol <- function(b) ifelse(b %in% names(BCOL), BCOL[b], GREY)
+# In the biome panel only biomes that also appear among the plotted ecoregions are
+# coloured; the rest stay grey. The colours then function purely as the key for the
+# ecoregion panel, which carries no legend of its own in the composite.
+bcol_keyed <- function(b, keyed) ifelse(b %in% keyed, bcol(b), GREY)
 blab <- function(b) gsub("Xeric Shrublands","Xeric Shrub.", gsub("Grasslands, Savannas & Shrublands","Grasslands & Savannas",
         gsub("Tropical & Subtropical","Trop./Subtrop.", b)))
 EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
@@ -26,14 +47,22 @@ EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
 # ---- borders + maps ----------------------------------------------------------
 message("maps")
 borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
-mk_map <- function(tif, ttl, clab, pal){
+# Cropped to the latitudes that actually carry data (-35 to 48 deg): the former
+# -58/84 band left ~41% of the panel empty and squeezed the map. Longitude is
+# trimmed at -130 for the same reason (westernmost data is -112).
+mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE){
   r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
   vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
-  ggplot() + geom_raster(data=d, aes(x,y,fill=v)) + geom_sf(data=borders, fill=NA, colour="black", linewidth=.12) +
-    scale_fill_viridis_c(option=pal, limits=c(min(d$v,na.rm=TRUE),vmax), oob=squish, name=clab) +
-    coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
-    theme_void(base_size=11) + theme(plot.title=element_text(face="bold"),
-      legend.key.width=unit(.28,"cm"), legend.key.height=unit(1.1,"cm"))
+  ggplot() + geom_raster(data=d, aes(x,y,fill=v)) + geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
+    scale_fill_viridis_c(option=pal, limits=c(min(d$v,na.rm=TRUE),vmax), oob=squish, name=clab,
+      labels=if (scale_1e3) label_number(scale=1e3) else waiver(),
+      guide=guide_colourbar(barwidth=unit(.42,"cm"), barheight=unit(5.4,"cm"))) +
+    coord_sf(xlim=c(-130,180), ylim=c(-40,52), expand=FALSE) + labs(title=ttl) +
+    theme_void(base_size=11) +
+    theme(plot.title=element_text(face="bold", size=12, hjust=0), plot.title.position="plot",
+          legend.position="right", legend.justification="center",
+          legend.title=element_text(size=9, hjust=0), legend.text=element_text(size=8),
+          legend.margin=margin(l=6), plot.margin=margin(2,2,2,2))
 }
 maps <- list(
   c("Absolute_Richness_Tot.tif","Absolute richness of spiny-trunk species (0.1°)","Species richness","D","MAP_absolute_richness"),
@@ -89,29 +118,53 @@ S <- list(total=summarise_cond("Relative_Richness_Tot.tif","total"),
 
 # ---- biome & ecoregion figures + composite -----------------------------------
 message("figures + composite")
-mk_biome <- function(bio) { bio$biome <- factor(bio$biome, levels=rev(bio$biome))
-  ggplot(bio, aes(mean, biome)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
-    geom_point(aes(colour=biome), size=3) + scale_colour_manual(values=sapply(levels(bio$biome),bcol),guide="none") +
-    scale_y_discrete(labels=function(b) blab(as.character(b))) + labs(x="Mean relative richness (± 95% CI)", y=NULL) }
-mk_eco <- function(ec) { top <- head(ec,25)
+XLAB <- expression("Mean relative richness ("%*%10^-3*", ± 95% CI)")
+# `keyed` = the biomes represented among the plotted ecoregions; only those are
+# coloured, so the biome panel reads as the key for the ecoregion panel.
+mk_biome <- function(bio, keyed) { bio$biome <- factor(bio$biome, levels=rev(bio$biome))
+  ggplot(bio, aes(mean, biome)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey65",linewidth=.5) +
+    geom_point(aes(colour=biome), size=3.1) +
+    scale_colour_manual(values=sapply(levels(bio$biome), bcol_keyed, keyed=keyed), guide="none") +
+    scale_y_discrete(labels=function(b) blab(as.character(b))) +
+    scale_x_continuous(labels=label_number(scale=1e3)) +
+    labs(x=XLAB, y=NULL) + theme(axis.text.y=element_text(size=9)) }
+# legend=TRUE for the standalone figure (nothing else to key off); FALSE in the
+# composite, where panel B supplies the key.
+mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
   lab <- paste0(top$ECO_NAME, "  (", round(top$top15_freq*100), "%)")   # append rank stability
   top$lab <- factor(lab, levels=rev(lab))
-  ggplot(top, aes(mean, lab)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey60") +
-    geom_point(aes(colour=BIOME_NAME), size=2.6) + scale_colour_manual(values=sapply(unique(top$BIOME_NAME),bcol),
-      labels=function(b) blab(b), name="Biome") +
-    labs(x="Mean relative richness (± 95% CI)", y=NULL,
-         caption="(x%) = rank stability: share of spatial block-bootstrap resamples ranking the ecoregion in the top 15") +
-    theme(legend.position="right", legend.text=element_text(size=6.5), legend.title=element_text(size=7.5),
-          plot.caption=element_text(hjust=0, size=7.5, colour="grey30")) }
+  cap <- paste0(if (legend) "" else "Colours as in panel B.   ",
+                "(x%) = rank stability: share of spatial block-bootstrap resamples ranking the ecoregion in the global top 15")
+  ggplot(top, aes(mean, lab)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey65",linewidth=.5) +
+    geom_point(aes(colour=BIOME_NAME), size=3.1) +
+    scale_colour_manual(values=sapply(sort(unique(top$BIOME_NAME)),bcol),
+      labels=function(b) blab(b), name="Biome", guide=if (legend) "legend" else "none") +
+    scale_x_continuous(labels=label_number(scale=1e3)) +
+    labs(x=XLAB, y=NULL, caption=cap) +
+    theme(axis.text.y=element_text(size=9), legend.position="right",
+          legend.text=element_text(size=7), legend.title=element_text(size=8),
+          plot.caption=element_text(hjust=0, size=7.5, colour="grey35")) }
+CLAB <- c(total="spiny", prickly="prickly", thorny="thorny")   # "total-trunk species" was wrong
+RELF <- c(total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif",
+          thorny="Relative_Richness_Thorny.tif")
 for (cond in names(S)){
-  ggsave(file.path(outdir,sprintf("FIG_biome_%s.png",cond)), mk_biome(S[[cond]]$bio) + labs(title=sprintf("Relative %s-trunk richness by biome",cond)), width=10, height=6, dpi=170)
-  ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)), mk_eco(S[[cond]]$ec) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness",cond)), width=10.5, height=9, dpi=170)
-  # composite: A map, B biome, C ecoregions
-  relmap <- switch(cond, total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif", thorny="Relative_Richness_Thorny.tif")
-  pa <- mk_map(relmap, sprintf("A)  Relative richness of %s-trunk species (0.1°)",cond), "Relative richness", "D")
-  pb <- mk_biome(S[[cond]]$bio) + labs(title="B)  By biome") + theme(plot.title=element_text(hjust=0))
-  pc <- mk_eco(S[[cond]]$ec) + labs(title="C)  Top 25 ecoregions") + theme(plot.title=element_text(hjust=0))
-  comp <- pa / (pb | pc) + plot_layout(heights=c(1.25,1.5))
-  ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp, width=16, height=13.4, dpi=160)
+  bio <- S[[cond]]$bio; ec <- S[[cond]]$ec
+  keyed <- unique(head(ec,25)$BIOME_NAME)
+  miss <- setdiff(unique(c(bio$biome, keyed)), names(BCOL))
+  if (length(miss)) warning(cond, ": no colour assigned for ", paste(miss, collapse="; "), call.=FALSE)
+  ggsave(file.path(outdir,sprintf("FIG_biome_%s.png",cond)),
+         mk_biome(bio, keyed) + labs(title=sprintf("Relative %s-trunk richness by biome", CLAB[[cond]])),
+         width=10, height=6, dpi=170)
+  ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)),
+         mk_eco(ec, legend=TRUE) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness", CLAB[[cond]])),
+         width=11, height=9, dpi=170)
+  # composite: A map, B biome (the key), C ecoregions (no legend of its own)
+  pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (0.1°)", CLAB[[cond]]),
+               expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE)
+  pb <- mk_biome(bio, keyed) + labs(title="B)  By biome")
+  pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
+  comp <- pa / (pb + pc + plot_layout(widths=c(1,1.15))) + plot_layout(heights=c(1,1.55))
+  ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,
+         width=15, height=10.8, dpi=170, bg="white")
 }
 message("DONE -> ", outdir)
