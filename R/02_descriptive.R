@@ -98,8 +98,18 @@ lon <- ev[["xmin"]] + (col0+0.5)*rs[1]; lat <- ev[["ymax"]] - (row0+0.5)*rs[2]
 blk5 <- floor((lon+180)/5)*1000 + floor((lat+90)/5)   # 5 deg block id for the bootstrap
 eid <- values(eco_id)[,1]
 
+# 5 deg blocks: at or above the measured range of within-ecoregion autocorrelation
+# (375-525 km across all three conditions), which is the dependence a block bootstrap
+# on an ecoregion mean has to absorb. NB this is a different quantity from Model 1's
+# 7 deg, which is the range of its residuals after the environmental predictors are
+# fitted -- the two differ because they were measured on different things.
+#
+# resample() rather than sample(x, ...): with a single block, sample(41005, 1, TRUE)
+# draws from 1:41005 instead of returning 41005, the lookup misses, and mean(NULL) is
+# NaN -- which blanked the CI for the 54 ecoregions that occupy only one 5 deg block.
+resample <- function(x) x[sample.int(length(x), length(x), replace=TRUE)]
 boot <- function(v, b, nb=1000, seed=0){ set.seed(seed); ub <- unique(b); by <- split(v, b)
-  o <- numeric(nb); for (i in 1:nb) o[i] <- mean(unlist(by[as.character(sample(ub,length(ub),TRUE))])); o }
+  o <- numeric(nb); for (i in 1:nb) o[i] <- mean(unlist(by[as.character(resample(ub))])); o }
 
 summarise_cond <- function(relfile, tag){
   rel <- values(rast(file.path(RELD,relfile)))[,1]
@@ -107,16 +117,22 @@ summarise_cond <- function(relfile, tag){
   d <- data.frame(rel=rel[keep], ECO_ID=eid[keep], blk=blk5[keep]) |>
        left_join(lut, by="ECO_ID") |> filter(!BIOME_NAME %in% EXCLUDE, !is.na(BIOME_NAME))
   # biome
+  # n_blocks is what the interval actually rests on: a unit occupying a single 5 deg
+  # block has no between-block variation to resample, so its CI collapses onto the
+  # point estimate. Reported so a narrow interval can be read for what it is.
   bio <- d |> group_by(BIOME_NAME) |> group_modify(~{ bb <- boot(.x$rel,.x$blk)
-      tibble(mean=mean(.x$rel), lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE), n_cells=nrow(.x), n_eco=n_distinct(.x$ECO_ID)) }) |>
+      tibble(mean=mean(.x$rel), lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
+             n_cells=nrow(.x), n_eco=n_distinct(.x$ECO_ID), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME)
   write_csv(bio, file.path(outdir, sprintf("biome_summary_%s.csv", tag)))
   # ecoregion (>=10 cells) + rank stability (top-15 across block resamples)
   ec <- d |> group_by(ECO_ID) |> filter(n()>=10) |> group_modify(~{ bb <- boot(.x$rel,.x$blk, nb=400, seed=.y$ECO_ID%%9999)
-      tibble(ECO_NAME=.x$ECO_NAME[1], BIOME_NAME=.x$BIOME_NAME[1], mean=mean(.x$rel), lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE), n_cells=nrow(.x)) }) |>
+      tibble(ECO_NAME=.x$ECO_NAME[1], BIOME_NAME=.x$BIOME_NAME[1], mean=mean(.x$rel),
+             lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
+             n_cells=nrow(.x), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean))
   ub <- unique(d$blk); cnt <- setNames(numeric(nrow(ec)), ec$ECO_ID); NR <- 250
-  for (i in 1:NR){ s <- d[d$blk %in% sample(ub,length(ub),TRUE),]
+  for (i in 1:NR){ s <- d[d$blk %in% resample(ub),]
     mm <- s |> group_by(ECO_ID) |> summarise(m=mean(rel), k=n(), .groups="drop") |> filter(k>=10) |> arrange(desc(m)) |> head(15)
     for (e in as.character(mm$ECO_ID)) if (e %in% names(cnt)) cnt[e] <- cnt[e]+1 }
   ec$top15_freq <- as.numeric(cnt[as.character(ec$ECO_ID)])/NR
