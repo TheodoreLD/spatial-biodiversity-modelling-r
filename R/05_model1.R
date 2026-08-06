@@ -13,7 +13,7 @@
 #   * no spatial term                                -> spatial_term_test.csv
 #   * tuning by the 1-SE rule (simplest adequate model wins)
 #   * block size derived from the residual correlogram, not assumed
-#   * ALE (not PDP), which stays valid under correlated predictors
+#   * ALE, which stays valid under correlated predictors
 #   * one block-bootstrap ensemble supplies the ALE CIs
 #   * early stopping on a spatially separated subset of the training blocks
 # (The first three are produced by 05_model1_sensitivity.R; species-drop robustness
@@ -28,7 +28,7 @@ STACK  <- paths$predictor_stack   # outputs/raster_model/predictor_stack.tif (bu
 outdir <- paths$model1; dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
-HERB <- c("mammal_richness","consumption")   # present-natural megafauna >5 kg (PHYLACINE Mass.g>5000)
+HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV, HERB); TARGET <- "trunkrichness"
 NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
           dry_mean="Dry-season deciduousness", height="Vegetation height",
@@ -68,8 +68,7 @@ message("0. INPUTS + COLLINEARITY")
 df0 <- as.data.frame(ps, xy=TRUE, na.rm=TRUE) |> rename(longitude=x, latitude=y)
 # ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) -------------------
 # Chosen by the resolution sweep (resolution_sweep.csv): 1 deg maximises spatial-CV R2
-# and cuts n from ~404k pseudo-replicates to ~4.9k, which is far more defensible given
-# only 74 mapped species ranges. 2 deg over-coarsens and R2 drops.
+# and cuts n from ~404k pseudo-replicates to ~4.9k.
 AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
 if (AGG > 1) {
   df <- df0 |>
@@ -116,9 +115,7 @@ res0 <- df[[TARGET]] - oof0
 i <- sample(nrow(df), min(2500, nrow(df))); z <- scale(res0[i])[,1]
 D <- outer(seq_along(i), seq_along(i), function(a,b) hav(df$longitude[i][a], df$latitude[i][a], df$longitude[i][b], df$latitude[i][b]))
 bins <- seq(0,3000,150); mids <- (bins[-1]+bins[-length(bins)])/2
-# Moran-like correlogram: mean product of standardized residuals per distance band.
-# D > 0 drops the self-pairs, which contribute z^2 (mean 1) and would otherwise
-# inflate the first band (0.80 vs 0.75 here, ~29% of that band's pairs).
+
 correlogram <- function(z, D, bins) sapply(seq_len(length(bins)-1), function(k){
   m <- D>=bins[k] & D<bins[k+1] & D>0
   if (!any(m)) NA_real_ else mean(outer(z,z)[m], na.rm=TRUE) })
@@ -136,9 +133,7 @@ bid <- blk(df$longitude, df$latitude, BLOCK)
 # =============================================================================
 message("2. TUNING")
 # 1-SE rule: among configurations whose spatial-CV RMSE is within one standard error
-# of the best, take the SIMPLEST (shallowest, most regularised). Deeper trees buy a
-# little CV R2 but a much larger train-CV gap, which is not defensible with only
-# ~74 independent species ranges.
+# of the best, take the SIMPLEST (shallowest, most regularised).
 GRID <- unlist(lapply(c(3,4,6,8), function(dp) lapply(c(3,10,30), function(l2)
           list(depth=dp, learning_rate=.05, l2_leaf_reg=l2))), recursive=FALSE)
 fT <- folds_of(bid,5,1)
@@ -172,32 +167,31 @@ sens <- do.call(rbind, lapply(c(max(3,BLOCK-3), BLOCK, BLOCK+3), function(deg){
   v <- sapply(0:4, function(f){ tr<-fo!=f; te<-fo==f; r2(df[[TARGET]][te], pr(fit_es(df[tr,], bb[tr], best), df[te,])) })
   data.frame(block_deg=deg, r2=round(mean(v),3), sd=round(sd(v),3)) }))
 write_csv(sens, file.path(outdir,"blocksize_sensitivity.csv"))
-# Random (non-spatial) 5-fold CV reference, computed here rather than quoted from a
-# previous run: the gap against the spatial-CV R2 is the cost of honouring spatial
-# autocorrelation, and is the number to cite when arguing that random CV is optimistic.
+
 frand <- c()
 for (rr in 1:3){ set.seed(200+rr); fo <- sample(rep_len(0:4, nrow(df)))
   for (f in 0:4){ tr <- fo!=f; te <- fo==f
     frand <- c(frand, r2(df[[TARGET]][te], pr(fit_es(df[tr,], bid[tr], best, seed=rr), df[te,]))) } }
-# pooled_oof_r2 is the headline number: every out-of-fold prediction scored ONCE
-# against the global mean. Prefer it to spatial_cv_r2 (the mean of per-fold R2).
-# Per-fold R2 uses each fold's own variance as its denominator, so a fold whose
-# held-out blocks happen to cover a homogeneous region scores badly even when its
-# RMSE is low -- here RMSE varies only ~1.2x across folds while sd(y) varies ~1.4x
-# and correlates 0.85 with fold R2. The fold spread is therefore mostly a
-# denominator artefact, NOT evidence that the model fails in particular regions.
-ok_oof <- is.finite(oof)
-# NB fold_r2_p2.5 / p97.5 are the spread of the 15 individual fold R2 values,
-# NOT a confidence interval on the mean.
-write_csv(data.frame(pooled_oof_r2=r2(df[[TARGET]][ok_oof], oof[ok_oof]),
+
+ok_oof <- is.finite(oof); pooled <- r2(df[[TARGET]][ok_oof], oof[ok_oof])
+
+# Two numbers are reported: pooled_oof_r2 (every out-of-fold prediction scored once
+# against the global mean) and train_r2 (the overfitting check). The rest is archive
+# only. random_cv_r2 uses random rather than spatial folds at the same 1 deg unit --
+# the contrast that shows why a random split flatters performance, useful in a reviewer
+# response, not in the paper. spatial_cv_* is the mean of per-fold R2: the same quantity
+# as pooled but divided by each fold's own variance, so a fold covering a homogeneous
+# region scores badly even at low RMSE.
+write_csv(data.frame(pooled_oof_r2=pooled, train_r2=mean(trr),
+                     random_cv_r2=mean(frand), random_cv_sd=sd(frand),
                      spatial_cv_r2=mean(fr), spatial_cv_sd=sd(fr), spatial_cv_se=sd(fr)/sqrt(length(fr)),
                      fold_r2_p2.5=unname(quantile(fr,.025)), fold_r2_p97.5=unname(quantile(fr,.975)),
-                     random_cv_r2=mean(frand), random_cv_sd=sd(frand),
-                     train_r2=mean(trr), rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE))),
+                     rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE))),
           file.path(outdir,"performance_summary.csv"))
-message(sprintf("  pooled OOF R2=%.3f (the number to report)", r2(df[[TARGET]][ok_oof], oof[ok_oof])))
-message(sprintf("  random-CV reference R2=%.3f (SD %.3f)", mean(frand), sd(frand)))
-message(sprintf("  spatial-CV R2=%.3f (SD %.3f) | train %.3f | gap %.3f", mean(fr), sd(fr), mean(trr), mean(trr)-mean(fr)))
+message(sprintf("  REPORT: pooled OOF R2=%.3f | train R2=%.3f (gap %.3f)",
+                pooled, mean(trr), mean(trr)-pooled))
+message(sprintf("  archive: random-fold %.3f | mean-of-folds %.3f (SD %.3f)",
+                mean(frand), mean(fr), sd(fr)))
 
 # =============================================================================
 # 4. RESIDUAL DIAGNOSTICS
@@ -214,7 +208,7 @@ message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial 
 # 5. BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs
 # =============================================================================
 message("5. ENSEMBLE (ALE CIs)")
-set.seed(5)   # section-level seed: the ensemble does not depend on the RNG stream above
+set.seed(5)
 NB <- 25; ub <- unique(bid)
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
