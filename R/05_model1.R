@@ -253,20 +253,28 @@ write_csv(data.frame(thinned_cv_r2=mean(thin)), file.path(outdir,"thinning.csv")
 # =============================================================================
 message("7. FIGURES")
 suppressPackageStartupMessages({ library(ggplot2); library(patchwork) })
-theme_set(theme_minimal(base_size=11) + theme(panel.grid.minor=element_blank(),
-          plot.title=element_text(face="bold", size=11), axis.line=element_line(colour="grey30")))
+theme_set(theme_minimal(base_size=11) + theme(panel.grid=element_blank(),
+          plot.title=element_text(face="bold", size=11), plot.title.position="plot",
+          axis.line=element_line(colour="grey30")))
 BLUE <- "#2c6fbb"; ok <- is.finite(oof)
 ord <- as.character(NAME[c("mammal_richness","consumption","vpi_mean","height","cold_mean","dry_mean")])
 write_csv(tibble::tibble(longitude=df$longitude, latitude=df$latitude, observed=df[[TARGET]], oof=oof, resid=resid),
           file.path(outdir,"model1_oof.csv"))
-# ALE (single blue, ordered megafauna -> vegetation -> seasonality)
+# ALE. Two columns / three rows: portrait, so it fits a manuscript page, and each row
+# is one theme (megafauna, vegetation, seasonality). ALE is rescaled x10^-3 -- the raw
+# values are ~1e-3, which ggplot renders as "5e-04" tick labels.
 at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
 ggsave(file.path(outdir,"M1_ALE.png"),
   ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
     geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
-    facet_wrap(~predictor, scales="free", ncol=3) +
-    labs(x=NULL,y="ALE",title="Model 1 ALE with 95% block-bootstrap CI  (order: megafauna → vegetation → seasonality)"),
-  width=13, height=7, dpi=180)
+    facet_wrap(~predictor, scales="free", ncol=2) +
+    scale_y_continuous(labels=scales::label_number(scale=1e3)) +
+    labs(x=NULL, y=expression("ALE ("%*%10^-3*")"),
+         title="Model 1 ALE with 95% block-bootstrap CI",
+         subtitle="rows: megafauna, vegetation, seasonality") +
+    theme(plot.subtitle=element_text(size=9, colour="grey35"),
+          strip.text=element_text(face="bold", size=10)),
+  width=7.5, height=9, dpi=300)
 # collinearity: correlation heatmap + VIF + concurvity
 cmL <- as.data.frame(cc) |> tibble::rownames_to_column("var") |> tidyr::pivot_longer(-var, names_to="col", values_to="rho")
 lev <- as.character(NAME[PREDS]); cmL$var <- factor(cmL$var, levels=lev); cmL$col <- factor(cmL$col, levels=lev)
