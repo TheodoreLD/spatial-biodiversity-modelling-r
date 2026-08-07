@@ -287,7 +287,11 @@ pc <- ggplot(vt, aes(C, reorder(pred,C))) + geom_col(fill="#cc7777") + xlim(0,1)
 ggsave(file.path(outdir,"M1_collinearity.png"), ph + pv + pc + plot_layout(widths=c(1.35,1,1)), width=17, height=5, dpi=170)
 # diagnostics: obs-vs-pred, calibration, QQ, residual correlogram
 dobs <- tibble::tibble(o=df[[TARGET]][ok], p=oof[ok])
-p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_abline(linetype=2) + labs(x="Observed",y="Predicted (OOF)",title=sprintf("Obs vs pred (R²=%.3f)",mean(fr)))
+# R2 here must be the POOLED out-of-fold value: this panel plots exactly those
+# predictions, so mean(fr) -- the mean of per-fold R2, each against its own fold's
+# variance -- is a different quantity and does not describe this scatter.
+p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_abline(linetype=2) +
+  labs(x="Observed", y="Predicted (OOF)", title=sprintf("Obs vs pred (pooled OOF R²=%.3f)", pooled))
 cal <- dobs; cal$b <- cut(cal$p, quantile(cal$p, seq(0,1,.1)), include.lowest=TRUE); cal <- aggregate(cbind(o,p)~b, cal, mean)
 p2 <- ggplot(cal, aes(p,o)) + geom_line(colour=BLUE) + geom_point(colour=BLUE) + geom_abline(linetype=2) + labs(x="Predicted (decile)",y="Observed",title="Calibration")
 p3 <- ggplot(tibble::tibble(s=resid[ok]), aes(sample=s)) + stat_qq(size=.4,colour=BLUE) + stat_qq_line(linetype=2) + labs(x="Theoretical",y="Ordered",title="Residual QQ")
