@@ -39,7 +39,10 @@ cont_of <- function(lo, la) { out <- rep("Other", length(lo))
   out[lo>=  25 & lo<=180 & la>=-12 & la<= 80] <- "Asia"
   out[lo>= 112 & lo<=154 & la>=-44 & la<=-10] <- "Other"
   out[lo>= -20 & lo<= 55 & la>=-35 & la<= 40 & lo < afro_asia_lon(la)] <- "Africa"; out }
-zslope <- function(yv, xv, mn, sd) { z <- (xv - mn)/sd; unname(coef(lm(yv ~ z))[2]) }
+# Same ranking metric as 06_model2.R: spread of the constrained fitted values across cells,
+# in SDs of the response. Kept identical here so the jackknife tests the ranking the paper
+# reports rather than a different statistic.
+MIN_PRESENT <- 0.20
 
 # --- inputs -------------------------------------------------------------------
 ps <- load_stack(paths$predictor_stack, ENV, "predictor stack (environment layers)")
@@ -78,29 +81,27 @@ build <- function(keep) {
   g$continent <- cont_of(g$lon, g$lat); g
 }
 
-# --- slopes for one table -----------------------------------------------------
-slopes_for <- function(g) {
+# --- delta_sd for one table ---------------------------------------------------
+scores_for <- function(g) {
   out <- list()
   for (cont in CONTS) {
     sub <- g[g$continent == cont, ]; if (nrow(sub) < 80) next
-    y <- sub$rel
+    y <- sub$rel; sdy <- sd(y); if (!is.finite(sdy) || sdy <= 0) next
     for (cl in CLADES) {
       x <- sub[[cl]]
-      if (sum(x > 0) < 30 || length(unique(x)) < 5) next
-      q <- unique(quantile(x, seq(0, 1, length.out = 21)))
+      if (sum(x > 0) < 30 || length(unique(x)) < 5 || mean(x > 0) < MIN_PRESENT) next
       m <- catboost.train(catboost.load_pool(matrix(x, ncol = 1), label = y), NULL,
                           params = c(cbp, list(monotone_constraints = "(1)")))
-      p <- catboost.predict(m, catboost.load_pool(matrix(q, ncol = 1)))
       out[[length(out)+1]] <- data.frame(continent = cont, clade = DISP(cl),
-                                         slope = zslope(p, q, mean(x), sd(x)))
+        delta_sd = sd(catboost.predict(m, catboost.load_pool(matrix(x, ncol = 1)))) / sdy)
     }
   }
   bind_rows(out)
 }
 
 # --- full model as the reference ordering -------------------------------------
-full <- slopes_for(build(seq_len(nsp))) |>
-  group_by(continent) |> mutate(rank_full = rank(-slope, ties.method = "min")) |> ungroup()
+full <- scores_for(build(seq_len(nsp))) |>
+  group_by(continent) |> mutate(rank_full = rank(-delta_sd, ties.method = "min")) |> ungroup()
 message("full 74-species reference ranking computed")
 
 # --- jackknife ----------------------------------------------------------------
@@ -109,9 +110,9 @@ for (fr in FRACS) {
   for (rep in seq_len(NREP)) {
     set.seed(as.integer(1000*fr*100 + rep))
     keep <- sort(sample(nsp, round((1 - fr)*nsp)))
-    s <- slopes_for(build(keep))
+    s <- scores_for(build(keep))
     if (!nrow(s)) next
-    s <- s |> group_by(continent) |> mutate(rank = rank(-slope, ties.method = "min")) |> ungroup()
+    s <- s |> group_by(continent) |> mutate(rank = rank(-delta_sd, ties.method = "min")) |> ungroup()
     rows[[length(rows)+1]] <- s |> mutate(frac = fr, rep = rep, n_species = length(keep))
   }
   message(sprintf("  drop %d%% done (%d reps)", as.integer(fr*100), NREP))
@@ -122,8 +123,8 @@ write_csv(jk, file.path(outdir, "model2_jackknife_ranks.csv"))
 # --- summary: how often does each clade stay in the top 3? --------------------
 summ <- jk |> group_by(continent, clade) |>
   summarise(n_fits = n(), top1_freq = mean(rank == 1), top3_freq = mean(rank <= 3),
-            median_rank = median(rank), slope_mean = mean(slope), .groups = "drop") |>
-  left_join(full |> select(continent, clade, slope_full = slope, rank_full),
+            median_rank = median(rank), delta_sd_mean = mean(delta_sd), .groups = "drop") |>
+  left_join(full |> select(continent, clade, delta_sd_full = delta_sd, rank_full),
             by = c("continent","clade")) |>
   arrange(continent, rank_full)
 write_csv(summ, file.path(outdir, "model2_jackknife_summary.csv"))
@@ -140,7 +141,7 @@ ggsave(file.path(outdir, "FIG_M2_jackknife_rank.png"),
     scale_colour_manual(values = COL, guide = "none") +
     scale_x_continuous(breaks = 1:10) +
     facet_wrap(~continent, scales = "free_y") +
-    labs(x = "rank of the standardized monotonic slope", y = NULL,
+    labs(x = "rank by δ_sd (spread of the constrained clade effect across cells)", y = NULL,
          title = "Model 2 — clade ranking under species-drop jackknife (10/20/30% of the 74 species removed)",
          caption = "Each point is one jackknife replicate. A firm ranking gives tight columns; a spread means the order is not identifiable.") +
     theme_minimal(base_size = 10) +
