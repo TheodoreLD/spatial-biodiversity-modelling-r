@@ -338,8 +338,23 @@ for (cond in c("total","prickly","thorny")){
       geom_line(data=sc, aes(x,y_fit,colour=continent),linetype=2,linewidth=.5) +
       scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
       facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
-      title=sprintf("Model 2 — unconstrained shape + constrained slope (dashed), relative %s-trunk richness",cond)) +
-      theme(legend.position="bottom"),
+      title=sprintf("Model 2 — unconstrained shape + constrained slope (dashed), relative %s-trunk richness",cond),
+      caption="The dashed line is the slope of the MONOTONIC model, not a fit to the solid unconstrained curve; see FIG_M2_shape_constrained_* for it drawn on the curve it summarises.") +
+      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+    width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
+  # The constrained (non-decreasing) curve that the ranking metric is actually measured
+  # on, with the reported slope drawn through it. Without this panel the constrained fit
+  # is invisible: model2_curves_constrained.csv$y/y_lo/y_hi were written but never
+  # plotted, so there was no way to judge how well the single number summarises the curve.
+  ggsave(file.path(outdir,paste0("FIG_M2_shape_constrained_",cond,".png")),
+    ggplot(sc) + geom_ribbon(aes(x,ymin=y_lo,ymax=y_hi,fill=continent),alpha=.13) +
+      geom_line(aes(x,y,colour=continent),linewidth=.7) +
+      geom_line(aes(x,y_fit,colour=continent),linetype=2,linewidth=.5) +
+      scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
+      facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
+      title=sprintf("Model 2 — monotonic-constrained shape (solid) + reported slope (dashed), relative %s-trunk richness",cond),
+      caption="Constraint is one-sided (non-decreasing), so the curve cannot fall and the slope is >= 0 by construction: it ranks the STRENGTH of positive association, not its direction.") +
+      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
   # same unconstrained shape under both conditions, centred so they are comparable:
   # solid = clade alone, dashed = clade + environment (ALE, already centred)
