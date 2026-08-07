@@ -1,66 +1,66 @@
 ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
-285,Tonle Sap freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.005654040667371302,0.005489777118243553,0.00603425083681941,189,3,0.952
-286,Tonle Sap-Mekong peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.005348425302090067,0.004768785593084624,0.00567070136257396,165,4,0.952
-319,Indochina mangroves,Mangroves,0.004625125703872375,0.0032571509924790906,0.005616408561466423,192,8,0.984
-74,Sudd flooded grasslands,Flooded Grasslands & Savannas,0.004516660380888962,0.00344313046293734,0.004715830658911101,1544,3,0.888
-273,Southwest Borneo freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.004288298500777811,0.0030248833009628236,0.004641417453051296,294,6,0.992
-224,Chao Phraya freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.004185731804278917,0.0031164501463839165,0.004515607852763573,239,4,0.92
-291,Central Indochina dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.003838821050003237,0.003022760407629542,0.004249752216709065,2266,8,0.956
+285,Tonle Sap freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.005654040667371302,0.005489777118243553,0.00603425083681941,189,3,0.936
+286,Tonle Sap-Mekong peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.005348425302090067,0.004768785593084624,0.00567070136257396,165,4,0.936
+319,Indochina mangroves,Mangroves,0.004625125703872375,0.0032571509924790906,0.005616408561466423,192,8,0.972
+74,Sudd flooded grasslands,Flooded Grasslands & Savannas,0.004516660380888962,0.00344313046293734,0.004715830658911101,1544,3,0.872
+273,Southwest Borneo freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.004288298500777811,0.0030248833009628236,0.004641417453051296,294,6,0.976
+224,Chao Phraya freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.004185731804278917,0.0031164501463839165,0.004515607852763573,239,4,0.96
+291,Central Indochina dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.003838821050003237,0.003022760407629542,0.004249752216709065,2266,8,0.96
 293,East Deccan dry-evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.0037579469464938432,0.0027405135582999457,0.005576586350798607,187,3,0.784
-299,Southeast Indochina dry evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.00338095063250825,0.0029086974499040043,0.00472539933097192,1041,4,0.844
-221,Borneo peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.003310434184545143,0.0028349657209855526,0.004049805627966469,550,6,0.756
-225,Chao Phraya lowland moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032899091016782237,5.952380985642473e-4,0.0040389431229272445,169,3,0.624
-281,Sundaland heath forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032417672317221497,0.002452855659447796,0.0039016240320869544,617,6,0.612
-322,Sunda Shelf mangroves,Mangroves,0.0032346801788876558,0.002704353027567632,0.0037722795222727384,272,11,0.68
-22,Niger Delta swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032027950191981774,0.003187310959522923,0.003212472556495211,117,2,0.788
+299,Southeast Indochina dry evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.00338095063250825,0.0029086974499040043,0.00472539933097192,1041,4,0.832
+221,Borneo peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.003310434184545143,0.0028349657209855526,0.004049805627966469,550,6,0.732
+225,Chao Phraya lowland moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032899091016782237,5.952380985642473e-4,0.0040389431229272445,169,3,0.648
+281,Sundaland heath forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032417672317221497,0.002452855659447796,0.0039016240320869544,617,6,0.604
+322,Sunda Shelf mangroves,Mangroves,0.0032346801788876558,0.002704353027567632,0.0037722795222727384,272,11,0.724
+22,Niger Delta swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032027950191981774,0.003187310959522923,0.003212472556495211,117,2,0.796
 316,Godavari-Krishna mangroves,Deserts & Xeric Shrublands,0.003193350146130587,0.0030796740215509105,0.0035517968703061343,52,5,0.808
-112,East African mangroves,Mangroves,0.003144571684639562,0.0024603112251497805,0.0038015724159777163,11,3,0.172
-264,Peninsular Malaysian peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0031063271410487316,0.0031063271410487316,0.0031063271410487316,27,1,0.296
-52,Northern Congolian Forest-Savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0030910128542595973,0.002564490787504749,0.0035482366966608898,5744,10,0.536
-6,Cross-Niger transition forests,Tropical & Subtropical Moist Broadleaf Forests,0.0030355854988704588,0.0030299804805378827,0.003060107454075478,172,2,0.252
-290,Central Deccan Plateau dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0030254315359245425,0.0028328938618544467,0.003115957438057408,1784,7,0.292
-301,Sri Lanka dry-zone dry evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.002841610070329954,0.002516159040775771,0.0028688065351952065,389,2,0.032
-61,Victoria Basin forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002797876636190848,0.0017832847617819,0.0033571377099631105,1246,6,0.264
-95,Hobyo grasslands and shrublands,Deserts & Xeric Shrublands,0.002769630439283829,0.0027581328568472103,0.0028486763185355812,63,2,0
+112,East African mangroves,Mangroves,0.003144571684639562,0.0024603112251497805,0.0038015724159777163,11,3,0.18
+264,Peninsular Malaysian peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0031063271410487316,0.0031063271410487316,0.0031063271410487316,27,1,0.324
+52,Northern Congolian Forest-Savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0030910128542595973,0.002564490787504749,0.0035482366966608898,5744,10,0.564
+6,Cross-Niger transition forests,Tropical & Subtropical Moist Broadleaf Forests,0.0030355854988704588,0.0030299804805378827,0.003060107454075478,172,2,0.308
+290,Central Deccan Plateau dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0030254315359245425,0.0028328938618544467,0.003115957438057408,1784,7,0.272
+301,Sri Lanka dry-zone dry evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.002841610070329954,0.002516159040775771,0.0028688065351952065,389,2,0.036
+61,Victoria Basin forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002797876636190848,0.0017832847617819,0.0033571377099631105,1246,6,0.22
+95,Hobyo grasslands and shrublands,Deserts & Xeric Shrublands,0.002769630439283829,0.0027581328568472103,0.0028486763185355812,63,2,0.012
 25,Northern Swahili coastal forests,Tropical & Subtropical Moist Broadleaf Forests,0.002752006117423827,0.002333976658881004,0.0032909338467937226,1166,6,0.128
 223,Cardamom Mountains rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.002708080188411624,0.002708080188411624,0.002708080188411624,369,1,0
-575,Espinal,"Temperate Grasslands, Savannas & Shrublands",0.0026894179462071057,0.0023577814504109258,0.002832154735641011,817,5,0.004
+575,Espinal,"Temperate Grasslands, Savannas & Shrublands",0.0026894179462071057,0.0023577814504109258,0.002832154735641011,817,5,0
 58,Southern Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002612544860507191,0.002431980446504025,0.002916211007211589,4615,7,0.012
-576,Humid Pampas,"Temperate Grasslands, Savannas & Shrublands",0.002601338301521242,0.0021750692021738315,0.0031403289309148734,716,3,0.096
-585,Paraná flooded savanna,Flooded Grasslands & Savannas,0.0025943420704321136,0.0022703893625651275,0.0031711837682541055,350,3,0.076
-111,Central African mangroves,Mangroves,0.00258630757742592,0.0022846872903667676,0.003234500256328835,213,6,0.084
+576,Humid Pampas,"Temperate Grasslands, Savannas & Shrublands",0.002601338301521242,0.0021750692021738315,0.0031403289309148734,716,3,0.124
+585,Paraná flooded savanna,Flooded Grasslands & Savannas,0.0025943420704321136,0.0022703893625651275,0.0031711837682541055,350,3,0.04
+111,Central African mangroves,Mangroves,0.00258630757742592,0.0022846872903667676,0.003234500256328835,213,6,0.092
 257,Northern Khorat Plateau moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.002567882611745174,0.002567882611745174,0.002567882611745174,143,1,0
 266,Red River freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0025575398075212115,0.0018932222155854106,0.0025648400008391877,92,2,0
 297,North Deccan dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.002543076488678484,0.002204430938166167,0.0026815538894117415,497,3,0
 323,Sundarbans mangroves,Mangroves,0.0025193230417483534,0.0019195133936591446,0.00261020329145884,76,2,0
-265,Peninsular Malaysian rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0025050264229641676,0.0021338436238158313,0.0031537329661659895,988,4,0
+265,Peninsular Malaysian rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0025050264229641676,0.0021338436238158313,0.0031537329661659895,988,4,0.008
 586,Southern Cone Mesopotamian savanna,Flooded Grasslands & Savannas,0.002488029995075767,0.002487349280915466,0.0025445292703807354,252,2,0
-46,Itigi-Sumbu thicket,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002478252266369322,0.001161762251285836,0.0029502636555708566,85,3,0.012
+46,Itigi-Sumbu thicket,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002478252266369322,0.001161762251285836,0.0029502636555708566,85,3,0.02
 261,Orissa semi-evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,0.002470458917567075,0.0021937318178343363,0.0025424249036322265,177,3,0
-228,East Deccan moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.002464199243402118,0.002270761578573757,0.002729796682140774,2887,5,0.016
+228,East Deccan moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.002464199243402118,0.002270761578573757,0.002729796682140774,2887,5,0.008
 571,Humid Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0024632678795058513,0.0023500796917375363,0.0026854461861541197,2433,5,0
 219,Borneo lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.002462277062859042,0.0021789299270614988,0.0026913718957320572,3460,7,0
-569,Dry Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0024440310044295073,0.002180282754959615,0.002736161585143451,2353,6,0
+569,Dry Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0024440310044295073,0.002180282754959615,0.002736161585143451,2353,6,0.004
 23,Nigerian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.0024402196237296413,0.0023745297721621617,0.0025042494429470398,547,2,0
-258,Northern Thailand-Laos moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0024357644539092964,0.0017396680929738543,0.003170060005504638,367,3,0.064
+258,Northern Thailand-Laos moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0024357644539092964,0.0017396680929738543,0.003170060005504638,367,3,0.052
 294,Irrawaddy dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0024026146378563684,0.0021694333476012153,0.0025519332724370006,281,4,0
 268,South China-Vietnam subtropical evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,0.0023595053279032614,0.001333660259535618,0.002804577985355498,1872,5,0
 232,Hainan Island monsoon rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.002344392146019695,0.002157547837123275,0.003233104672593375,130,3,0
-63,Western Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0023081713472416607,0.002156454572030317,0.0027271369960435365,3048,6,0.004
+63,Western Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0023081713472416607,0.002156454572030317,0.0027271369960435365,3048,6,0
 43,East Sudanian savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0023009547202930314,0.0019039178820659157,0.002598299372104365,8543,14,0
 76,Zambezian flooded grasslands,Flooded Grasslands & Savannas,0.0022857809210691344,0.0018469792712249118,0.002607547510717521,1655,13,0
 574,Uruguayan savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002236351079987788,0.0020348898336283484,0.0024846930847512464,2712,4,0
 26,Northwest Congolian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.0022321202036388052,0.0019436187965836751,0.0023855060631072893,3518,5,0
 298,South Deccan Plateau dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0021937155147608387,0.0017986651273223303,0.0022354860754398207,617,2,0
-57,Southern Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002173285156061348,0.00156842634308103,0.0031258287031686676,1810,4,0.068
+57,Southern Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002173285156061348,0.00156842634308103,0.0031258287031686676,1810,4,0.04
 312,Rann of Kutch seasonal salt marsh,Flooded Grasslands & Savannas,0.0021687585534129897,0.002137383306398988,0.0021701592340832576,117,2,0
-55,Somali Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002166930849349526,0.0019231853655521866,0.0025029999079772347,4248,6,0.004
+55,Somali Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002166930849349526,0.0019231853655521866,0.0025029999079772347,4248,6,0
 33,Zambezian evergreen dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.002165150672723144,0.0014207590317640167,0.002204004111537029,271,4,0
 72,Lake Chad flooded savanna,Flooded Grasslands & Savannas,0.0021567483199760318,0.0021548314614157223,0.0021598365921009746,47,2,0
 53,Sahelian Acacia savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0021495631706626435,0.0017889589186979899,0.0025964493244781694,6169,12,0
-51,Northern Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0021297872913273643,0.0019730259987285367,0.002735856313943155,2758,8,0.02
+51,Northern Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0021297872913273643,0.0019730259987285367,0.002735856313943155,2758,8,0.004
 318,Thar desert,Deserts & Xeric Shrublands,0.002124889009613909,0.00190063682384789,0.002542271511629224,51,3,0
-315,Deccan thorn scrub forests,Deserts & Xeric Shrublands,0.002117297391959931,0.001740333898950403,0.0025959695231048004,2492,9,0.016
+315,Deccan thorn scrub forests,Deserts & Xeric Shrublands,0.002117297391959931,0.001740333898950403,0.0025959695231048004,2492,9,0.004
 49,Mandara Plateau woodlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002101907630511109,0.0019801980815827847,0.0021039028690181304,62,2,0
 282,Sundarbans freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0020972061271701628,0.0016359886100802284,0.0021532419002745474,120,2,0
 280,Sumatran peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0020706202970387643,0.0012028273692218743,0.0028117668755377584,706,4,0
@@ -68,7 +68,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
 584,Pantanal,Flooded Grasslands & Savannas,0.0020533017393168165,0.0018943474554505787,0.0020930020788267672,1449,4,0
 73,Makgadikgadi halophytics,Flooded Grasslands & Savannas,0.002050329596257513,0.0020434707575160164,0.0020744727086275815,113,2,0
 287,Upper Gangetic Plains moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0020325678705344374,0.0013531884961676868,0.002147481273094751,1005,5,0
-39,Central Zambezian wet miombo woodlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002025193575540295,0.0017849721691643834,0.0024406393526519364,8405,13,0
+39,Central Zambezian wet miombo woodlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002025193575540295,0.0017849721691643834,0.0024406393526519364,8405,13,0.004
 263,Peninsular Malaysian montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0020077335547736223,0.0019775751907940187,0.002032733251230399,139,2,0
 296,Narmada Valley dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0019995553565829356,0.0011651453086906206,0.00218960081508596,1393,5,0
 237,Kayah-Karen montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.001983318090639132,0.0019420868108180483,0.0028241686751633616,1016,3,0
@@ -91,7 +91,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
 401,Texas blackland prairies,"Temperate Grasslands, Savannas & Shrublands",0.0017116789837969923,0.0012598531794975752,0.0018219135926772717,413,2,0
 238,Lower Gangetic Plains moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0017017601533926474,0.001456225635805413,0.0018998667781033297,1290,6,0
 317,Indus Valley desert,Deserts & Xeric Shrublands,0.001694191212300211,0.001694191212300211,0.001694191212300211,40,1,0
-24,Northeast Congolian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.0016885074774037022,0.0012158487191185738,0.0028950845186249264,4173,7,0.012
+24,Northeast Congolian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.0016885074774037022,0.0012158487191185738,0.0028950845186249264,4173,7,0.004
 260,Northern Vietnam lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.00166907502255047,0.0010077149199787527,0.002344599546631798,186,3,0
 75,Zambezian coastal flooded savanna,Flooded Grasslands & Savannas,0.0016636920718927726,0.0015210638969724419,0.0024593717158755413,165,4,0
 188,Trans Fly savanna and grasslands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0016594058953695626,0.0016594058953695626,0.0016594058953695626,214,1,0

@@ -131,6 +131,11 @@ summarise_cond <- function(relfile, tag){
              lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
              n_cells=nrow(.x), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean))
+  # Seeded: without this the loop inherits the RNG state left by the per-ecoregion
+  # bootstraps above, so the stability percentages shift whenever anything upstream
+  # changes -- they moved by up to 3 points when the resample() bug was fixed, purely
+  # from the stream moving. Seeding makes them reproducible.
+  set.seed(11)
   ub <- unique(d$blk); cnt <- setNames(numeric(nrow(ec)), ec$ECO_ID); NR <- 250
   for (i in 1:NR){ s <- d[d$blk %in% resample(ub),]
     mm <- s |> group_by(ECO_ID) |> summarise(m=mean(rel), k=n(), .groups="drop") |> filter(k>=10) |> arrange(desc(m)) |> head(15)

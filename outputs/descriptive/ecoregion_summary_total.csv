@@ -1,43 +1,43 @@
 ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
-565,Beni savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.009079991838261985,0.006252633165714778,0.010443587685184623,1042,4,0.952
-529,Chiquitano dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0074007642673901645,0.006296137974604262,0.008176160377786906,1950,4,0.968
-584,Pantanal,Flooded Grasslands & Savannas,0.007260185229322719,0.007214485114124024,0.007401052986276267,1449,4,0.944
-524,Brazilian Atlantic dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.007030336461749693,0.006871657962053401,0.007396128328196752,964,4,0.944
+565,Beni savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.009079991838261985,0.006252633165714778,0.010443587685184623,1042,4,0.984
+529,Chiquitano dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0074007642673901645,0.006296137974604262,0.008176160377786906,1950,4,1
+584,Pantanal,Flooded Grasslands & Savannas,0.007260185229322719,0.007214485114124024,0.007401052986276267,1449,4,0.956
+524,Brazilian Atlantic dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.007030336461749693,0.006871657962053401,0.007396128328196752,964,4,0.928
 6,Cross-Niger transition forests,Tropical & Subtropical Moist Broadleaf Forests,0.006784825244658562,0.006120214908150956,0.0069367361787174425,172,2,0.868
-22,Niger Delta swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006605843758672221,0.006374621919045846,0.006750357408438706,117,2,0.872
-285,Tonle Sap freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006530807013549502,0.006285485184900922,0.007039959263056517,189,3,0.94
-74,Sudd flooded grasslands,Flooded Grasslands & Savannas,0.006382271925523066,0.00497911567799747,0.006617669027576439,1544,3,0.64
-505,Southwest Amazon moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.0063722899833033786,0.0056644827302011775,0.007190377624390988,6160,11,0.796
+22,Niger Delta swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006605843758672221,0.006374621919045846,0.006750357408438706,117,2,0.876
+285,Tonle Sap freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006530807013549502,0.006285485184900922,0.007039959263056517,189,3,0.952
+74,Sudd flooded grasslands,Flooded Grasslands & Savannas,0.006382271925523066,0.00497911567799747,0.006617669027576439,1544,3,0.604
+505,Southwest Amazon moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.0063722899833033786,0.0056644827302011775,0.007190377624390988,6160,11,0.768
 23,Nigerian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.006304813037291033,0.0060900711313239715,0.006525122326005388,547,2,0.824
 572,Llanos,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.006189131711971152,0.00525265591546437,0.007229547895767349,3071,5,0.728
-546,Sinú Valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0061039319736611785,0.006011980352923274,0.008751036288837591,206,3,0.764
-286,Tonle Sap-Mekong peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006087595952505415,0.005101408023142912,0.00657489855304419,165,4,0.62
-476,Madeira-Tapajós moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.006085732628769865,0.004778970293661364,0.007598829951857677,5906,11,0.632
-602,Guajira-Barranquilla xeric scrub,Deserts & Xeric Shrublands,0.006046360774453789,0.005103294868163313,0.008404974456507343,187,4,0.588
-481,Mato Grosso tropical dry forests,Tropical & Subtropical Moist Broadleaf Forests,0.006037370359768514,0.005069411089572743,0.006615251124417582,3405,6,0.572
-469,Iquitos várzea,Tropical & Subtropical Moist Broadleaf Forests,0.005992295397505904,0.0055416637703101235,0.0065903768603326005,926,7,0.536
-503,Solimões-Japurá moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00594752038505861,0.005513412798054536,0.0061142141798656464,1366,2,0.396
-567,Cerrado,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.005809788841369833,0.005271894022558241,0.00635360625257203,15981,20,0.3
-478,Magdalena-Urabá moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005790933270739973,0.005267496142285258,0.008409585803747177,628,4,0.312
-111,Central African mangroves,Mangroves,0.005614842325361542,0.004515657379523226,0.007666324236306278,213,6,0.228
-496,Purus várzea,Tropical & Subtropical Moist Broadleaf Forests,0.0054805876734552155,0.005174785065845121,0.0057290219612162775,1425,8,0.012
-497,Purus-Madeira moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00542203318786768,0.004877413150559112,0.006277177896426648,1420,4,0.092
-474,Juruá-Purus moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00540734043537705,0.005038770675622776,0.0056068513647628306,1980,4,0.004
+546,Sinú Valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0061039319736611785,0.006011980352923274,0.008751036288837591,206,3,0.7
+286,Tonle Sap-Mekong peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.006087595952505415,0.005101408023142912,0.00657489855304419,165,4,0.604
+476,Madeira-Tapajós moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.006085732628769865,0.004778970293661364,0.007598829951857677,5906,11,0.644
+602,Guajira-Barranquilla xeric scrub,Deserts & Xeric Shrublands,0.006046360774453789,0.005103294868163313,0.008404974456507343,187,4,0.532
+481,Mato Grosso tropical dry forests,Tropical & Subtropical Moist Broadleaf Forests,0.006037370359768514,0.005069411089572743,0.006615251124417582,3405,6,0.564
+469,Iquitos várzea,Tropical & Subtropical Moist Broadleaf Forests,0.005992295397505904,0.0055416637703101235,0.0065903768603326005,926,7,0.552
+503,Solimões-Japurá moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00594752038505861,0.005513412798054536,0.0061142141798656464,1366,2,0.336
+567,Cerrado,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.005809788841369833,0.005271894022558241,0.00635360625257203,15981,20,0.316
+478,Magdalena-Urabá moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005790933270739973,0.005267496142285258,0.008409585803747177,628,4,0.32
+111,Central African mangroves,Mangroves,0.005614842325361542,0.004515657379523226,0.007666324236306278,213,6,0.304
+496,Purus várzea,Tropical & Subtropical Moist Broadleaf Forests,0.0054805876734552155,0.005174785065845121,0.0057290219612162775,1425,8,0.004
+497,Purus-Madeira moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00542203318786768,0.004877413150559112,0.006277177896426648,1420,4,0.108
+474,Juruá-Purus moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.00540734043537705,0.005038770675622776,0.0056068513647628306,1980,4,0
 319,Indochina mangroves,Mangroves,0.005371343250468878,0.004037404084915696,0.0065462029076261835,192,8,0.196
-520,Apure-Villavicencio dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.005246802128657458,0.004726822794232841,0.006481089870849589,557,3,0.076
-483,Napo moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005206191950965452,0.0036244426784869522,0.006043424671485321,2041,5,0.048
+520,Apure-Villavicencio dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.005246802128657458,0.004726822794232841,0.006481089870849589,557,3,0.112
+483,Napo moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005206191950965452,0.0036244426784869522,0.006043424671485321,2041,5,0.056
 473,Japurá-Solimões-Negro moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005089110754157837,0.004263177557998869,0.005384363176762276,2174,5,0
 224,Chao Phraya freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.005046461345472034,0.0038149043393786997,0.005418729514158407,239,4,0
-482,Monte Alegre várzea,Tropical & Subtropical Moist Broadleaf Forests,0.005020014847451378,0.004830945502156389,0.005736550391452118,546,6,0.024
+482,Monte Alegre várzea,Tropical & Subtropical Moist Broadleaf Forests,0.005020014847451378,0.004830945502156389,0.005736550391452118,546,6,0.036
 446,Caqueta moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.005010252060116031,0.004763564476322139,0.005268170645946049,1482,5,0
-571,Humid Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004925580893846694,0.004413310067762171,0.005950876335843667,2627,5,0.056
-575,Espinal,"Temperate Grasslands, Savannas & Shrublands",0.004911864357768913,0.004333928544266714,0.005547594630031162,905,7,0
+571,Humid Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004925580893846694,0.004413310067762171,0.005950876335843667,2627,5,0.036
+575,Espinal,"Temperate Grasslands, Savannas & Shrublands",0.004911864357768913,0.004333928544266714,0.005547594630031162,905,7,0.004
 293,East Deccan dry-evergreen forests,Tropical & Subtropical Dry Broadleaf Forests,0.004847834373570301,0.0036540181858332028,0.006970732783277829,187,3,0
 585,Paraná flooded savanna,Flooded Grasslands & Savannas,0.004789873806626669,0.004482872849493696,0.0052962174251823145,350,3,0
 112,East African mangroves,Mangroves,0.004769363313574682,0.003963989904150367,0.0057023587636649605,11,3,0
 25,Northern Swahili coastal forests,Tropical & Subtropical Moist Broadleaf Forests,0.0047410175270771555,0.004056800214093859,0.005435705066730197,1166,6,0
 273,Southwest Borneo freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0046071688593903775,0.0035290305321622225,0.004886194099070699,294,6,0
-44,Guinean forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004606549874839715,0.003157516860151553,0.005713745660129216,5219,10,0.012
+44,Guinean forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004606549874839715,0.003157516860151553,0.005713745660129216,5219,10,0.004
 266,Red River freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.004603571541931318,0.003407800104469061,0.004616711887397936,92,2,0
 586,Southern Cone Mesopotamian savanna,Flooded Grasslands & Savannas,0.004593571043750714,0.004587601314871067,0.005089058540761471,252,2,0
 291,Central Indochina dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.004560472145571808,0.003706895654705517,0.005009358425213018,2266,8,0
@@ -46,13 +46,13 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
 539,Maracaibo dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0045048524352235475,0.003999877689867136,0.004831402770554026,247,2,0
 541,Panamanian dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.004492015888293584,0.004491542527256043,0.004494585562497377,45,2,0
 531,Ecuadorian dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.004478552264495278,0.003590738001678671,0.004699876014361295,159,4,0
-518,Xingu-Tocantins-Araguaia moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.004427619530005045,0.0038781586498307457,0.005225742983036465,2149,5,0.004
+518,Xingu-Tocantins-Araguaia moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.004427619530005045,0.0038781586498307457,0.005225742983036465,2149,5,0.016
 58,Southern Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004349988996215722,0.004084424862496623,0.004783502618727616,4615,7,0
 471,Isthmian-Pacific moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.004310377042080897,0.0043061680704059085,0.005316321272403002,240,2,0
 61,Victoria Basin forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004267734071437156,0.0025988724735504557,0.0050071164201563245,1246,6,0
 316,Godavari-Krishna mangroves,Deserts & Xeric Shrublands,0.0042486817647631354,0.004105999650817146,0.0046646053902804855,52,5,0
 290,Central Deccan Plateau dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.00424128891328546,0.0039201718660584394,0.004303421867635312,1784,7,0
-484,Negro-Branco moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.004170232641019261,0.0036023185028342575,0.005239622700373221,1628,5,0
+484,Negro-Branco moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.004170232641019261,0.0036023185028342575,0.005239622700373221,1628,5,0.004
 46,Itigi-Sumbu thicket,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.004162714186617557,0.002369818394072354,0.004750653911950224,85,3,0
 498,Rio Negro campinarana,Tropical & Subtropical Moist Broadleaf Forests,0.004102825717107965,0.00369144291111489,0.0051178448282225035,793,5,0
 73,Makgadikgadi halophytics,Flooded Grasslands & Savannas,0.004100659192515026,0.004086941515032033,0.004148945417255163,113,2,0
@@ -70,10 +70,10 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
 63,Western Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0038932971373304916,0.003328611633056562,0.004556220620759665,3048,6,0
 540,Maranhão Babaçu forests,Tropical & Subtropical Dry Broadleaf Forests,0.0038766476003747065,0.0037140015108937554,0.004628178683945733,1147,4,0
 57,Southern Acacia-Commiphora bushlands and thickets,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0038615946598783216,0.003104563219342389,0.005178592902874308,1810,4,0
-569,Dry Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0038567125053718698,0.00211313217299909,0.006595610484896085,6482,10,0.048
+569,Dry Chaco,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0038567125053718698,0.00211313217299909,0.006595610484896085,6482,10,0.06
 11,Eastern Guinean forests,Tropical & Subtropical Moist Broadleaf Forests,0.003818602100855296,0.0030520992387561034,0.005240448978666619,1540,5,0
 95,Hobyo grasslands and shrublands,Deserts & Xeric Shrublands,0.003785313842522483,0.0028486763185355812,0.003921552027829669,63,2,0
-525,Caatinga,Tropical & Subtropical Dry Broadleaf Forests,0.0037790239428303007,0.0033871324955189806,0.004485992325050206,6009,7,0.004
+525,Caatinga,Tropical & Subtropical Dry Broadleaf Forests,0.0037790239428303007,0.0033871324955189806,0.004485992325050206,6009,7,0
 549,Tumbes-Piura dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0037709449168814475,0.003357699666611596,0.004842312812494735,129,4,0
 443,Bahia interior forests,Tropical & Subtropical Moist Broadleaf Forests,0.00376408536806749,0.003182200638818929,0.004316218508421733,1807,7,0
 574,Uruguayan savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.00370572792039115,0.0029043174097680285,0.0043395619928956195,3223,4,0
@@ -107,7 +107,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks,top15_freq
 261,Orissa semi-evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,0.003293945240961798,0.00292497577049352,0.0033898998962037944,177,3,0
 445,Caatinga Enclaves moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.003285060342889102,0.0031356495062543734,0.0035242291633039713,42,3,0
 292,Chhota-Nagpur dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.00326941819038502,0.0031477388803655584,0.0034745879397903223,1075,3,0
-615,South American Pacific mangroves,Mangroves,0.003249356363535158,0.0027935820642948873,0.004378578227867062,97,5,0
+615,South American Pacific mangroves,Mangroves,0.003249356363535158,0.0027935820642948873,0.004378578227867062,97,5,0.004
 538,Magdalena Valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.003217026758775638,0.0031669237900392284,0.003245695561711346,171,3,0
 39,Central Zambezian wet miombo woodlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0032125501575655923,0.0028502646111880576,0.003788892859209045,8405,13,0
 536,Lara-Falcón dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.0032125202606299095,0.0032125202606299095,0.0032125202606299095,140,1,0
