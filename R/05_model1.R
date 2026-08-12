@@ -209,7 +209,11 @@ message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial 
 # =============================================================================
 message("5. ENSEMBLE (ALE CIs)")
 set.seed(5)
-NB <- 25; ub <- unique(bid)
+# 200 resamples, matching Model 2. At the previous 25 the 2.5th and 97.5th percentiles
+# below were effectively the ensemble minimum and maximum, which is too thin a basis for a
+# 95% interval; the descriptive analysis already uses 400-1000. Nothing downstream shifts:
+# every later section reseeds explicitly, so only ale_curves.csv and M1_ALE.png change.
+NB <- 200; ub <- unique(bid)
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
 ale <- setNames(lapply(PREDS, function(p) matrix(NA, length(grids[[p]]), NB)), PREDS)

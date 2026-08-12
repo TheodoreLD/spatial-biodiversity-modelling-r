@@ -23,7 +23,7 @@ the richness layers and the richest ecoregions that the descriptive step charact
 | 3 | `03_mammal_ecoregions.R` | present-natural megafauna (>5 kg) of the richest ecoregion per continent | `outputs/ecoregion_mammal/` |
 | 4 | `04_data_preparation.R` | model-ready predictor stack + per-clade richness stack | `outputs/raster_model/` |
 | 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); collinearity + residual diagnostics | `outputs/model1/` |
-| 6 | `06_model2.R` | **Model 2** — mammal-clade associations, each clade fitted **with and without** the environmental covariates: unconstrained shape + OOB R², positive-monotonic ranking slope + OOB R², plus variance-partitioning diagnostics | `outputs/model2/` |
+| 6 | `06_model2.R` | **Model 2** — mammal-clade associations, each clade fitted **with and without** the environmental covariates: unconstrained shape (direction) + OOB R², constrained shape + `slope_std` ranking + OOB R², plus unconstrained variance-partitioning diagnostics | `outputs/model2/` |
 
 Each model has companion scripts (reviewer responses / methods justification):
 
@@ -31,7 +31,7 @@ Each model has companion scripts (reviewer responses / methods justification):
 |---|---|
 | `05_model1_sensitivity.R` | why 1°, why no transform, why no spatial term |
 | `05_model1_jackknife.R` | are the ALE shapes and CV-R² stable when 30% of the 74 species are dropped? |
-| `06_model2_jackknife.R` | does the **clade ranking** survive dropping 10/20/30% of the species? |
+| `06_model2_jackknife.R` | do the **ranking, response shapes and R²** survive dropping 10/20/30% of the species? |
 
 `R/config.R` holds `here()`-based paths; `R/requirements.R` lists packages;
 `ENVIRONMENT.md` records the versions the pipeline was verified with — read its `terra`
@@ -57,24 +57,38 @@ woody-plant richness (partly controls for uneven botanical sampling).
 - **Model 2** fits each clade independently, so clade–clade correlation is not a
   confounder, and fits every clade **twice** — alone, and alongside the four
   environmental covariates. The two settings share the same per-iteration block-bootstrap
-  seeds, so the comparison is *paired*: the change in shape, R² and slope is the
+  seeds, so the comparison is *paired*: the change in shape, R² and effect size is the
   environment's contribution, not resampling noise. Continents are split at the
   Suez/Red Sea line, so East Africa is African (`cont_of`).
-- **The ranking slope is one-sided.** The monotonic model is constrained non-decreasing,
-  so the slope is ≥ 0 by construction and ranks the *strength of positive association*.
-  It is not a test of direction, and `slope_lo > 0` should not be read as one — the
-  unconstrained response shape is what shows whether a relationship is positive.
-- **Two slope columns, two jobs.** Each continent is modelled on its own cells, so both
-  the predictor and the response are standardised *within* continent — 1 SD of
-  Proboscidea richness is 0.23 species in Africa but 0.71 in Asia. Use `slope` to rank
-  clades **within** a continent, and `slope_std` (= slope ÷ that continent's response SD,
-  hence unit-free) to compare the **same clade between** continents. `slope_env_std` is
-  the environment-adjusted equivalent.
+- **The ranking metric is `slope_std`**, the standardised slope of the constrained
+  response: the least-squares slope of the fitted curve against z-scored clade richness,
+  ÷ sd(response). Its units are **SDs of relative spiny-trunk richness per SD of clade
+  richness** — standardised on both axes, which is what makes it comparable across clades
+  (whose richness scales differ) and across continents (whose response scales differ). It
+  is fitted on a 21-point quantile grid, so it is weighted by where cells actually are
+  rather than by the plotted x-range. sd(response) is the full-sample value, so it is a
+  per-continent constant and ranking by the raw slope and by `slope_std` cannot disagree.
+  `slope_env` is the environment-adjusted equivalent, `retained` the surviving share.
+- **`slope_std` is one-sided.** The monotonic model is constrained non-decreasing, so the
+  slope is ≥ 0 by construction and ranks the *strength of positive association*. It is not
+  a test of direction: the direction of a response is read from the unconstrained curves
+  (`model2_curves*.csv`, `FIG_M2_shape_unconstrained_*`), which are free to fall. A clade
+  that fits flat
+  (`slope_std` ≈ 0, e.g. Diprotodontia) is reported as such — no positive association is a
+  result, not a reason for exclusion — with `n_present` alongside so sparse occupancy stays
+  visible.
+- **Variance partitioning is deliberately unconstrained.** It asks how much variance a
+  clade explains uniquely versus jointly with environment; constraining the fit would
+  measure the constraint as much as the data.
 - **How firm is the ranking?** Two independent checks, because the order turned out to be
   the fragile part: `model2_rank_stability.csv` re-ranks the clades inside every spatial
   block-bootstrap resample, and `06_model2_jackknife.R` re-ranks them after dropping
   10/20/30% of the 74 species. Agreement between the two is the evidence that an ordering
-  is real; disagreement means it is not identifiable.
+  is real; disagreement means it is not identifiable. The stability percentages are
+  **paired** — every clade sees the same resampled blocks, so they are re-ranked *within*
+  each resample. That matters: the clades' bootstrap draws correlate ≈ 0.46, so marginal
+  confidence intervals overlap far more than the ordering actually does, and reading the
+  ranking off the intervals alone would understate how firm it is.
 - Residual short-range spatial autocorrelation persists in both models and is disclosed
   as a limitation. Adding an explicit lon/lat term *raises* CV R² (see
   `spatial_term_test.csv`) but roughly halves the permutation importance of both
