@@ -147,7 +147,7 @@ ggsave(file.path(outdir, "FIG_M2_jackknife_rank.png"),
     scale_colour_manual(values = COL, guide = "none") +
     scale_x_continuous(breaks = 1:10) +
     facet_wrap(~continent, scales = "free_y") +
-    labs(x = "rank by δ_sd (spread of the constrained clade effect across cells)", y = NULL,
+    labs(x = "rank by the standardised slope of the constrained response", y = NULL,
          title = "Model 2 — clade ranking under species-drop jackknife (10/20/30% of the 74 species removed)",
          caption = "Each point is one jackknife replicate. A firm ranking gives tight columns; a spread means the order is not identifiable.") +
     theme_minimal(base_size = 10) +

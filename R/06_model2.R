@@ -428,14 +428,28 @@ for (cond in c("total","prickly","thorny")){
       caption="Both curves are non-decreasing by construction; the reported slope is the standardised linear trend through each.") +
       theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
+  # R2 of the CONSTRAINED model, clade alone vs environment-adjusted. The unconstrained R2
+  # is not plotted: the constrained model is the one the ranking is taken from, so its skill
+  # with and without the environmental covariates is the comparison that bears on the result.
+  # NB re-apply the factor: joining against env (character) drops the level order and the
+  # facets would fall back to alphabetical.
+  d2 <- d |> left_join(env |> filter(condition==cond) |>
+                         select(continent, clade, r2_env_mono, r2_env_mono_lo, r2_env_mono_hi),
+                       by=c("continent","clade")) |>
+    mutate(continent = factor(as.character(continent), CONTS))
   ggsave(file.path(outdir,paste0("FIG_M2_r2_mono_",cond,".png")),
-    ggplot(d, aes(y=reorder(clade,r2_mono))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+    ggplot(d2, aes(y=reorder(clade,r2_mono))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+      geom_segment(aes(x=r2_mono,xend=r2_env_mono,yend=reorder(clade,r2_mono)),colour="grey78",linewidth=.9) +
       geom_errorbarh(aes(xmin=r2_mono_lo,xmax=r2_mono_hi),height=0,colour="grey60") +
-      geom_point(aes(x=r2_mono,colour=continent),size=2.4) + geom_point(aes(x=r2),shape=1,size=2.4,colour="grey30") +
+      geom_point(aes(x=r2_mono,colour=continent),size=2.4) +
+      geom_point(aes(x=r2_env_mono,colour=continent),shape=21,fill="white",size=2.4,stroke=.9) +
       scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent,scales="free_y") +
-      labs(x="Out-of-bag R² (filled = monotonic, open = unconstrained)", y=NULL,
-      title=sprintf("Model 2 — constrained vs unconstrained clade-model R², relative %s-trunk richness",cond)),
-    width=14, height=5, dpi=170)
+      labs(x="Out-of-bag R² of the constrained model (filled = clade alone, open = + environment)", y=NULL,
+      title=sprintf("Model 2 — constrained clade-model R², with and without environmental covariates, relative %s-trunk richness",cond),
+      caption=paste("Bars: 95% spatial block-bootstrap CI on the clade-alone value.",
+                    "R² is out-of-bag, so a negative value means the model predicts worse than the response mean.", sep="\n")) +
+      theme(plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+    width=14, height=5.4, dpi=170)
   m <- env |> filter(condition==cond) |> left_join(dia[,c("condition","continent","clade","r2_clade","shared")],
         by=c("condition","continent","clade")) |>
     mutate(continent=factor(continent,CONTS), conf=ifelse(r2_clade>0.01, pmin(pmax(shared/r2_clade,0),1), NA_real_),
