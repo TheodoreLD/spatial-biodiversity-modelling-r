@@ -100,8 +100,6 @@ concurv <- sapply(PREDS, function(p){
   max(0, r2(Z[,p], oo)) })
 write_csv(tibble::tibble(predictor=as.character(NAME[PREDS]), VIF=round(as.numeric(vif),2),
           concurvity_R2=round(as.numeric(concurv),3)), file.path(outdir,"predictor_concurvity.csv"))
-write_csv(tibble::tibble(predictor=as.character(NAME[PREDS]), VIF=round(as.numeric(vif),2)),
-          file.path(outdir,"predictor_vif.csv"))
 message("  VIF: ", paste(PREDS, round(vif,2), collapse="  "))
 message("  concurvity R2: ", paste(PREDS, round(concurv,2), collapse="  "))
 
