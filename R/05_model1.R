@@ -149,6 +149,17 @@ ord  <- order(sapply(elig, function(s) s$par$depth), -sapply(elig, function(s) s
 best <- elig[[ord[1]]]$par
 message(sprintf("  best RMSE=%.5f (depth=%d); 1-SE pick -> depth=%d l2=%d",
                 stat[[ib]]$mean, stat[[ib]]$par$depth, best$depth, best$l2_leaf_reg))
+# The grid is written out so the 1-SE selection can be audited without re-running: every
+# other design decision in Model 1 has a CSV behind it, and this one previously did not.
+write_csv(data.frame(
+  depth        = sapply(stat, function(s) s$par$depth),
+  l2_leaf_reg  = sapply(stat, function(s) s$par$l2_leaf_reg),
+  cv_rmse      = mu,
+  cv_rmse_se   = sapply(stat, `[[`, "se"),
+  within_1se   = mu <= thr,
+  selected     = sapply(stat, function(s) s$par$depth == best$depth &&
+                                          s$par$l2_leaf_reg == best$l2_leaf_reg)),
+  file.path(outdir, "tuning_grid.csv"))
 
 # =============================================================================
 # 3. PERFORMANCE (repeated spatial CV + block-size sensitivity + overfit gap)
