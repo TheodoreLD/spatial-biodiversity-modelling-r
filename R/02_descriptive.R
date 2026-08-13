@@ -105,14 +105,21 @@ summarise_cond <- function(relfile, tag){
       tibble(mean=mean(.x$rel), lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
              n_cells=nrow(.x), n_eco=n_distinct(.x$ECO_ID), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME)
-  write_csv(bio, file.path(outdir, sprintf("biome_summary_%s.csv", tag)))
 
   ec <- d |> group_by(ECO_ID) |> filter(n()>=10) |> group_modify(~{ bb <- boot(.x$rel,.x$blk, nb=400, seed=.y$ECO_ID%%9999)
       tibble(ECO_NAME=.x$ECO_NAME[1], BIOME_NAME=.x$BIOME_NAME[1], mean=mean(.x$rel),
              lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
              n_cells=nrow(.x), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean))
+  # A unit contained in ONE 5 deg block has nothing to resample: every bootstrap draw
+  # returns that block, so lo == hi and the interval reads as perfect precision when the
+  # method could not estimate it at all. Report the mean and no interval.
+  ec$lo[ec$n_blocks == 1] <- NA_real_; ec$hi[ec$n_blocks == 1] <- NA_real_
+  bio$lo[bio$n_blocks == 1] <- NA_real_; bio$hi[bio$n_blocks == 1] <- NA_real_
+  message(sprintf("  %s: %d of %d ecoregions occupy a single block -> CI not reported",
+                  tag, sum(ec$n_blocks == 1), nrow(ec)))
 
+  write_csv(bio, file.path(outdir, sprintf("biome_summary_%s.csv", tag)))
   write_csv(ec, file.path(outdir, sprintf("ecoregion_summary_%s.csv", tag)))
   list(bio=bio, ec=ec)
 }
@@ -134,9 +141,14 @@ mk_biome <- function(bio, keyed) { bio$biome <- factor(bio$biome, levels=rev(bio
 
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
   top$lab <- factor(top$ECO_NAME, levels=rev(top$ECO_NAME))
-  cap <- if (legend) "" else "Colours as in panel B."
+  top$no_ci <- is.na(top$lo)                       # single-block: interval not estimable
+  cap <- paste0(if (legend) "" else "Colours as in panel B.  ",
+                if (any(top$no_ci))
+                  "Open symbols: the ecoregion lies within one 5\u00b0 block, so the block bootstrap cannot estimate an interval; the mean is shown alone."
+                else "")
   ggplot(top, aes(mean, lab)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey65",linewidth=.5) +
-    geom_point(aes(colour=BIOME_NAME), size=3.1) +
+    geom_point(aes(colour=BIOME_NAME, shape=no_ci), size=3.1, fill="white", stroke=1) +
+    scale_shape_manual(values=c(`FALSE`=16, `TRUE`=21), guide="none") +
     scale_colour_manual(values=sapply(sort(unique(top$BIOME_NAME)),bcol),
       labels=function(b) blab(b), name="Biome", guide=if (legend) "legend" else "none") +
     scale_x_continuous(labels=label_number(scale=1e3)) +

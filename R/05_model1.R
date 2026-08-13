@@ -168,25 +168,18 @@ sens <- do.call(rbind, lapply(c(max(3,BLOCK-3), BLOCK, BLOCK+3), function(deg){
   data.frame(block_deg=deg, r2=round(mean(v),3), sd=round(sd(v),3)) }))
 write_csv(sens, file.path(outdir,"blocksize_sensitivity.csv"))
 
-frand <- c()
-for (rr in 1:3){ set.seed(200+rr); fo <- sample(rep_len(0:4, nrow(df)))
-  for (f in 0:4){ tr <- fo!=f; te <- fo==f
-    frand <- c(frand, r2(df[[TARGET]][te], pr(fit_es(df[tr,], bid[tr], best, seed=rr), df[te,]))) } }
-
 ok_oof <- is.finite(oof); pooled <- r2(df[[TARGET]][ok_oof], oof[ok_oof])
 
 # Two numbers are reported: pooled_oof_r2 (every out-of-fold prediction scored once
 # against the global mean) and train_r2 (the overfitting check). 
 write_csv(data.frame(pooled_oof_r2=pooled, train_r2=mean(trr),
-                     random_cv_r2=mean(frand), random_cv_sd=sd(frand),
                      spatial_cv_r2=mean(fr), spatial_cv_sd=sd(fr), spatial_cv_se=sd(fr)/sqrt(length(fr)),
                      fold_r2_p2.5=unname(quantile(fr,.025)), fold_r2_p97.5=unname(quantile(fr,.975)),
                      rmse=sqrt(mean((df[[TARGET]]-oof)^2, na.rm=TRUE))),
           file.path(outdir,"performance_summary.csv"))
 message(sprintf("  REPORT: pooled OOF R2=%.3f | train R2=%.3f (gap %.3f)",
                 pooled, mean(trr), mean(trr)-pooled))
-message(sprintf("  archive: random-fold %.3f | mean-of-folds %.3f (SD %.3f)",
-                mean(frand), mean(fr), sd(fr)))
+message(sprintf("  archive: mean-of-folds %.3f (SD %.3f)", mean(fr), sd(fr)))
 
 # =============================================================================
 # 4. RESIDUAL DIAGNOSTICS

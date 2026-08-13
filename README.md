@@ -123,7 +123,6 @@ Reported so the manuscript and the archive cannot drift apart:
 |---|---|---|
 | Model 1 pooled out-of-fold R² | **0.426** | `model1/performance_summary.csv` |
 | — mean of per-fold R² (weaker statistic) | 0.367 (SD 0.162) | same |
-| — random-fold reference | 0.509 (SD 0.037) | same |
 | Analysis unit | 1° → 4,806 cells (from 398,474 at 0.1°) | `model1/resolution_sweep.csv` |
 | Block size (residual range ~675 km) | 7° | `model1/residual_correlogram.csv` |
 | Residual Moran's I at 75 km | 0.735 | same |

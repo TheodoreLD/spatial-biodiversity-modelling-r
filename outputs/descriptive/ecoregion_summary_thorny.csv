@@ -15,7 +15,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 22,Niger Delta swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0032027950191981774,0.003187310959522923,0.003212472556495211,117,2
 316,Godavari-Krishna mangroves,Deserts & Xeric Shrublands,0.003193350146130587,0.0030796740215509105,0.0035517968703061343,52,5
 112,East African mangroves,Mangroves,0.003144571684639562,0.0024603112251497805,0.0038015724159777163,11,3
-264,Peninsular Malaysian peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0031063271410487316,0.0031063271410487316,0.0031063271410487316,27,1
+264,Peninsular Malaysian peat swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0031063271410487316,NA,NA,27,1
 52,Northern Congolian Forest-Savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0030910128542595973,0.002564490787504749,0.0035482366966608898,5744,10
 6,Cross-Niger transition forests,Tropical & Subtropical Moist Broadleaf Forests,0.0030355854988704588,0.0030299804805378827,0.003060107454075478,172,2
 290,Central Deccan Plateau dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0030254315359245425,0.0028328938618544467,0.003115957438057408,1784,7
@@ -23,13 +23,13 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 61,Victoria Basin forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002797876636190848,0.0017832847617819,0.0033571377099631105,1246,6
 95,Hobyo grasslands and shrublands,Deserts & Xeric Shrublands,0.002769630439283829,0.0027581328568472103,0.0028486763185355812,63,2
 25,Northern Swahili coastal forests,Tropical & Subtropical Moist Broadleaf Forests,0.002752006117423827,0.002333976658881004,0.0032909338467937226,1166,6
-223,Cardamom Mountains rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.002708080188411624,0.002708080188411624,0.002708080188411624,369,1
+223,Cardamom Mountains rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.002708080188411624,NA,NA,369,1
 575,Espinal,"Temperate Grasslands, Savannas & Shrublands",0.0026894179462071057,0.0023577814504109258,0.002832154735641011,817,5
 58,Southern Congolian forest-savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.002612544860507191,0.002431980446504025,0.002916211007211589,4615,7
 576,Humid Pampas,"Temperate Grasslands, Savannas & Shrublands",0.002601338301521242,0.0021750692021738315,0.0031403289309148734,716,3
 585,Paraná flooded savanna,Flooded Grasslands & Savannas,0.0025943420704321136,0.0022703893625651275,0.0031711837682541055,350,3
 111,Central African mangroves,Mangroves,0.00258630757742592,0.0022846872903667676,0.003234500256328835,213,6
-257,Northern Khorat Plateau moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.002567882611745174,0.002567882611745174,0.002567882611745174,143,1
+257,Northern Khorat Plateau moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.002567882611745174,NA,NA,143,1
 266,Red River freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0025575398075212115,0.0018932222155854106,0.0025648400008391877,92,2
 297,North Deccan dry deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.002543076488678484,0.002204430938166167,0.0026815538894117415,497,3
 323,Sundarbans mangroves,Mangroves,0.0025193230417483534,0.0019195133936591446,0.00261020329145884,76,2
@@ -90,11 +90,11 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 757,Kuh Rud and Eastern Iran montane woodlands,Montane Grasslands & Shrublands,0.0017196848570807453,0.0015922927199617813,0.0018810482307647666,34,2
 401,Texas blackland prairies,"Temperate Grasslands, Savannas & Shrublands",0.0017116789837969923,0.0012598531794975752,0.0018219135926772717,413,2
 238,Lower Gangetic Plains moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0017017601533926474,0.001456225635805413,0.0018998667781033297,1290,6
-317,Indus Valley desert,Deserts & Xeric Shrublands,0.001694191212300211,0.001694191212300211,0.001694191212300211,40,1
+317,Indus Valley desert,Deserts & Xeric Shrublands,0.001694191212300211,NA,NA,40,1
 24,Northeast Congolian lowland forests,Tropical & Subtropical Moist Broadleaf Forests,0.0016885074774037022,0.0012158487191185738,0.0028950845186249264,4173,7
 260,Northern Vietnam lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.00166907502255047,0.0010077149199787527,0.002344599546631798,186,3
 75,Zambezian coastal flooded savanna,Flooded Grasslands & Savannas,0.0016636920718927726,0.0015210638969724419,0.0024593717158755413,165,4
-188,Trans Fly savanna and grasslands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0016594058953695626,0.0016594058953695626,0.0016594058953695626,214,1
+188,Trans Fly savanna and grasslands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0016594058953695626,NA,NA,214,1
 5,Congolian coastal forests,Tropical & Subtropical Moist Broadleaf Forests,0.001653819890644084,0.0014617234989914632,0.0018392597471207659,1538,5
 565,Beni savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0016498920310315086,0.0012084576820465618,0.0025225288070050617,899,2
 45,Horn of Africa xeric bushlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0016477990151463966,0.001588523900841899,0.0017108825394934436,184,4
@@ -137,13 +137,13 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 390,Cross-Timbers savanna-woodland,"Temperate Grasslands, Savannas & Shrublands",0.0013653061082619248,0.0013540806425897708,0.0013966480057801952,857,2
 69,East African halophytics,Flooded Grasslands & Savannas,0.001340587399210091,8.229504261786739e-4,0.0023041474632918835,27,3
 2,Cameroon Highlands forests,Tropical & Subtropical Moist Broadleaf Forests,0.001318198642793685,0.0012390087156192117,0.0013375505589010572,302,4
-248,Mindoro rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.001308862261066679,0.001308862261066679,0.001308862261066679,80,1
+248,Mindoro rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.001308862261066679,NA,NA,80,1
 470,Isthmian-Atlantic moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.0013051219694689702,0.0011440581613469069,0.001414370995540782,474,4
 440,Araucaria moist forests,Tropical & Subtropical Moist Broadleaf Forests,0.001305030719695988,7.813768980473939e-4,0.001478600425760503,1902,4
 19,Maputaland coastal forests and woodlands,Tropical & Subtropical Moist Broadleaf Forests,0.0012852555783486386,0.0012051832020381025,0.0019491890319235001,223,2
 154,Southern New Guinea freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0012830968333611393,8.469656226299442e-4,0.0015302559192403487,816,5
 10,Eastern Congolian swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0012816608951336515,9.825237759799922e-4,0.001503265619003514,751,6
-837,Red Sea-Arabian Desert shrublands,Deserts & Xeric Shrublands,0.0012782637052060593,0.0012782637052060593,0.0012782637052060593,21,1
+837,Red Sea-Arabian Desert shrublands,Deserts & Xeric Shrublands,0.0012782637052060593,NA,NA,21,1
 12,Ethiopian montane forests,Tropical & Subtropical Moist Broadleaf Forests,0.001266387092056113,7.794309575628075e-4,0.0023164133987544724,424,3
 184,Carpentaria tropical savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.001254747469629469,0.0011982858197801967,0.0012824327572579172,1046,5
 230,Eastern Java-Bali rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0012540688247922945,8.687529334565625e-4,0.0012696765570995646,411,2
@@ -165,11 +165,11 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 402,Western shortgrass prairie,"Temperate Grasslands, Savannas & Shrublands",0.0011640937934531187,0.0010927657785718592,0.0012547538069177444,1599,8
 247,Mindanao-Eastern Visayas rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.001157951392131059,9.809129900457789e-4,0.0013202958907239687,842,4
 386,Canadian Aspen forests and parklands,"Temperate Grasslands, Savannas & Shrublands",0.0011540176042858063,0.00115037467215241,0.0011720092282915603,291,2
-766,Sulaiman Range alpine meadows,Montane Grasslands & Shrublands,0.0011533786098218777,0.0011533786098218777,0.0011533786098218777,11,1
+766,Sulaiman Range alpine meadows,Montane Grasslands & Shrublands,0.0011533786098218777,NA,NA,11,1
 437,Tamaulipan mezquital,Deserts & Xeric Shrublands,0.0011505769766882573,8.262760765362708e-4,0.0011863822386750798,423,3
-105,Socotra Island xeric shrublands,Deserts & Xeric Shrublands,0.0011467889416962862,0.0011467889416962862,0.0011467889416962862,12,1
+105,Socotra Island xeric shrublands,Deserts & Xeric Shrublands,0.0011467889416962862,NA,NA,12,1
 485,Northeast Brazil restingas,Tropical & Subtropical Moist Broadleaf Forests,0.0011447627257439308,0.0010313892271369696,0.0011507297519864025,80,2
-138,Buru rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0011441647075116634,0.0011441647075116634,0.0011441647075116634,67,1
+138,Buru rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0011441647075116634,NA,NA,67,1
 109,Southwest Arabian highland xeric scrub,Deserts & Xeric Shrublands,0.0011440233394279385,0.0010154308596005042,0.001213440692107029,108,3
 321,Myanmar Coast mangroves,Mangroves,0.001141187133757269,0.0010052815749554238,0.001606074520330357,58,5
 330,Appalachian Piedmont forests,Temperate Broadleaf & Mixed Forests,0.0011349822606982933,8.034404951401732e-4,0.0014693340878182215,1638,5
@@ -178,18 +178,18 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 87,Southern Rift Montane forest-grassland,Montane Grasslands & Shrublands,0.0011177632811346224,7.773433562095572e-4,0.0012697026465241224,175,4
 77,Angolan montane forest-grassland,Montane Grasslands & Shrublands,0.0011164690999206728,0.0010242780475751855,0.001177929801484331,130,2
 217,New Guinea mangroves,Mangroves,0.0011149015412709833,8.236623355876834e-4,0.001405130005754971,159,7
-234,Irrawaddy freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0011085324576529472,0.0011085324576529472,0.0011085324576529472,46,1
-438,Wyoming Basin shrub steppe,Deserts & Xeric Shrublands,0.0011061636847443878,0.0011061636847443878,0.0011061636847443878,50,1
+234,Irrawaddy freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,0.0011085324576529472,NA,NA,46,1
+438,Wyoming Basin shrub steppe,Deserts & Xeric Shrublands,0.0011061636847443878,NA,NA,50,1
 92,Djibouti xeric shrublands,Deserts & Xeric Shrublands,0.0010966328238866923,9.340703793469372e-4,0.0012368190036407172,772,5
 387,Central US forest-grasslands transition,"Temperate Grasslands, Savannas & Shrublands",0.0010961931710124643,8.841393729317528e-4,0.0012449554223950075,1638,4
 506,Talamancan montane forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010901108664391494,0.0010676459564673414,0.0018450184725224972,135,3
 236,Jian Nan subtropical evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010890182675751716,8.470069958952629e-4,0.0014143799961986111,4042,8
-21,Mount Cameroon and Bioko montane forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010875235398998483,0.0010875235398998483,0.0010875235398998483,10,1
-367,South Central Rockies forests,Temperate Conifer Forests,0.001082955295434938,0.001082955295434938,0.001082955295434938,13,1
+21,Mount Cameroon and Bioko montane forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010875235398998483,NA,NA,10,1
+367,South Central Rockies forests,Temperate Conifer Forests,0.001082955295434938,NA,NA,13,1
 253,North Western Ghats moist deciduous forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010809537989424191,8.679849277033882e-4,0.0011873463810649733,271,5
 137,Biak-Numfoor rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010795676470955922,0.001055966247804463,0.001303780940361321,21,2
 166,Timor and Wetar deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,0.0010788671103055644,8.496422015014105e-4,0.001144033744703452,264,3
-334,Eastern Great Lakes lowland forests,Temperate Broadleaf & Mixed Forests,0.0010740950011596498,0.0010740950011596498,0.0010740950011596498,18,1
+334,Eastern Great Lakes lowland forests,Temperate Broadleaf & Mixed Forests,0.0010740950011596498,NA,NA,18,1
 99,Madagascar spiny thickets,Deserts & Xeric Shrublands,0.0010704790642039176,6.949270609766245e-4,0.001074517257787007,94,2
 343,Upper Midwest US forest-savanna transition,Temperate Broadleaf & Mixed Forests,0.0010584146111331722,0.0010111223673447967,0.0010618901984809444,235,3
 311,Terai-Duar savanna and grasslands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0010577100539105196,0.0010332750202947242,0.0012562651178226448,255,4
@@ -202,21 +202,21 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 611,Amazon-Orinoco-Southern Caribbean mangroves,Mangroves,0.001026325269375122,8.002412962152197e-4,0.0011803421398950424,163,6
 226,Chin Hills-Arakan Yoma montane forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010258055624525206,9.978178368722094e-4,0.0012487422731094833,260,2
 552,Bahamian pineyards,Tropical & Subtropical Coniferous Forests,0.0010242240297464798,8.103727595880628e-4,0.0011878308564932509,26,3
-823,East Saharan montane xeric woodlands,Deserts & Xeric Shrublands,0.0010241093661855249,0.0010241093661855249,0.0010241093661855249,17,1
+823,East Saharan montane xeric woodlands,Deserts & Xeric Shrublands,0.0010241093661855249,NA,NA,17,1
 541,Panamanian dry forests,Tropical & Subtropical Dry Broadleaf Forests,0.001023716421978962,9.659056200976728e-4,0.001337546489334532,45,2
 331,Appalachian-Blue Ridge forests,Temperate Broadleaf & Mixed Forests,0.001022982386491773,8.128149991425776e-4,0.0012274112647511887,1349,7
 155,Southern New Guinea lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010200023840297944,6.898333231220022e-4,0.001245587261610862,1000,5
 11,Eastern Guinean forests,Tropical & Subtropical Moist Broadleaf Forests,0.0010196531010419735,7.973088116942914e-4,0.0017878706181560316,1540,5
-186,Kimberly tropical savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0010091626990961467,0.0010091626990961467,0.0010091626990961467,77,1
+186,Kimberly tropical savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0010091626990961467,NA,NA,77,1
 329,Appalachian mixed mesophytic forests,Temperate Broadleaf & Mixed Forests,0.0010066779734402456,8.797644149450508e-4,0.0013808265517846767,1445,6
 181,Arnhem Land tropical savanna,"Tropical & Subtropical Grasslands, Savannas & Shrublands",0.0010060993398108866,0.0010010228025482384,0.001007647318832454,1271,2
 48,Limpopo lowveld,"Tropical & Subtropical Grasslands, Savannas & Shrublands",9.94209654369614e-4,6.672134913969785e-4,0.0011139223909315964,565,3
 38,Central bushveld,"Tropical & Subtropical Grasslands, Savannas & Shrublands",9.844982320395363e-4,7.067608242476415e-4,0.0010287771614618604,1237,4
-392,Flint Hills tallgrass prairie,"Temperate Grasslands, Savannas & Shrublands",9.77323487556229e-4,9.77323487556229e-4,9.77323487556229e-4,285,1
+392,Flint Hills tallgrass prairie,"Temperate Grasslands, Savannas & Shrublands",9.77323487556229e-4,NA,NA,285,1
 642,Guizhou Plateau broadleaf and mixed forests,Tropical & Subtropical Moist Broadleaf Forests,9.718119044988342e-4,8.462829721656653e-4,9.954923968932996e-4,2366,5
 524,Brazilian Atlantic dry forests,Tropical & Subtropical Dry Broadleaf Forests,9.673051878673154e-4,9.26474524245484e-4,0.0011776324662636838,892,4
 657,Changjiang Plain evergreen forests,Temperate Broadleaf & Mixed Forests,9.661463037459407e-4,9.011975506784836e-4,0.0010076250818973507,3686,6
-275,Sri Lanka montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,9.614981560541006e-4,9.614981560541006e-4,9.614981560541006e-4,24,1
+275,Sri Lanka montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,9.614981560541006e-4,NA,NA,24,1
 222,Brahmaputra Valley semi-evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,9.588452145940612e-4,5.50120738625992e-4,0.0010744332647961922,474,3
 165,Sumba deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,9.410084795059735e-4,8.923356271177335e-4,0.0010383541842824535,57,2
 694,East Afghan montane conifer forests,Temperate Conifer Forests,9.392552310600877e-4,9.319664677605033e-4,9.404700249433517e-4,28,2
@@ -233,7 +233,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 249,Mizoram-Manipur-Kachin rain forests,Tropical & Subtropical Moist Broadleaf Forests,9.000528645733739e-4,8.058372335471606e-4,9.5823617332523e-4,1163,5
 467,Gurupa várzea,Tropical & Subtropical Moist Broadleaf Forests,8.986898912833288e-4,8.166390703991056e-4,9.043098105219741e-4,78,2
 498,Rio Negro campinarana,Tropical & Subtropical Moist Broadleaf Forests,8.980076344819413e-4,7.208071235058027e-4,0.0013654757881597839,793,5
-162,Yapen rain forests,Tropical & Subtropical Moist Broadleaf Forests,8.976660901680589e-4,8.976660901680589e-4,8.976660901680589e-4,19,1
+162,Yapen rain forests,Tropical & Subtropical Moist Broadleaf Forests,8.976660901680589e-4,NA,NA,19,1
 511,Uatumã-Trombetas moist forests,Tropical & Subtropical Moist Broadleaf Forests,8.970624004251551e-4,7.519544056749645e-4,0.0011550958279308212,2886,6
 244,Meghalaya subtropical forests,Tropical & Subtropical Moist Broadleaf Forests,8.959010729061222e-4,8.859296220988552e-4,0.0014087185429941332,367,2
 79,Ethiopian montane grasslands and woodlands,Montane Grasslands & Shrublands,8.933646931205984e-4,7.97467860303015e-4,0.0011349314338468448,1384,5
@@ -244,7 +244,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 328,Allegheny Highlands forests,Temperate Broadleaf & Mixed Forests,8.78003841378437e-4,8.219507328855495e-4,9.380607433351022e-4,29,2
 163,Lesser Sundas deciduous forests,Tropical & Subtropical Dry Broadleaf Forests,8.772211905841759e-4,7.841915026550187e-4,0.0011614401591941714,302,3
 353,Colorado Rockies forests,Temperate Conifer Forests,8.738414746605688e-4,7.675929033818344e-4,0.0010863386172180374,18,2
-504,Southern Andean Yungas,Tropical & Subtropical Moist Broadleaf Forests,8.733041225544488e-4,8.733041225544488e-4,8.733041225544488e-4,12,1
+504,Southern Andean Yungas,Tropical & Subtropical Moist Broadleaf Forests,8.733041225544488e-4,NA,NA,12,1
 602,Guajira-Barranquilla xeric scrub,Deserts & Xeric Shrublands,8.678577222766724e-4,7.966672446028414e-4,0.001050621807063418,187,4
 482,Monte Alegre várzea,Tropical & Subtropical Moist Broadleaf Forests,8.65188120263683e-4,8.097380760979188e-4,0.0010021319033913514,514,6
 428,Chihuahuan desert,Deserts & Xeric Shrublands,8.647566871894967e-4,8.025545297035327e-4,0.00097791952206394985,105,4
@@ -271,7 +271,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 34,Angolan mopane woodlands,"Tropical & Subtropical Grasslands, Savannas & Shrublands",7.870261069911066e-4,7.445269651752688e-4,0.0010060601455804247,80,2
 497,Purus-Madeira moist forests,Tropical & Subtropical Moist Broadleaf Forests,7.863993401774004e-4,7.687643092394924e-4,8.180984496419322e-4,1409,4
 149,Northern New Guinea montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,7.832011316774393e-4,3.9266652602236717e-4,8.214095139447013e-4,192,4
-536,Lara-Falcón dry forests,Tropical & Subtropical Dry Broadleaf Forests,7.787595724596852e-4,7.787595724596852e-4,7.787595724596852e-4,31,1
+536,Lara-Falcón dry forests,Tropical & Subtropical Dry Broadleaf Forests,7.787595724596852e-4,NA,NA,31,1
 617,Southern Mesoamerican Pacific mangroves,Mangroves,7.75511677013984e-4,3.0085782054811716e-4,0.0012669327552430332,34,4
 546,Sinú Valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,7.743221379588222e-4,7.659517104912084e-4,0.001093879536104699,206,3
 304,Northeast India-Myanmar pine forests,Tropical & Subtropical Coniferous Forests,7.723615675455552e-4,6.379720798577182e-4,8.62910740052987e-4,88,3
@@ -279,10 +279,10 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 339,Northeast US Coastal forests,Temperate Broadleaf & Mixed Forests,7.617180775965184e-4,7.359194003609599e-4,7.820747298348972e-4,571,3
 148,Northern New Guinea lowland rain and freshwater swamp forests,Tropical & Subtropical Moist Broadleaf Forests,7.598798518542447e-4,5.692424507415445e-4,8.160030226270757e-4,1089,5
 271,South Western Ghats montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,7.566782960370049e-4,7.007903755745954e-4,7.834331515775201e-4,139,2
-748,Yellow Sea saline meadow,Flooded Grasslands & Savannas,7.51909854443511e-4,7.51909854443511e-4,7.51909854443511e-4,16,1
+748,Yellow Sea saline meadow,Flooded Grasslands & Savannas,7.51909854443511e-4,NA,NA,16,1
 104,Namibian savanna woodlands,Deserts & Xeric Shrublands,7.478818376311811e-4,7.344419300033335e-4,0.0011309192050248384,59,2
 478,Magdalena-Urabá moist forests,Tropical & Subtropical Moist Broadleaf Forests,7.409909814703694e-4,6.766075284247747e-4,0.0010511982254683971,628,4
-582,Guayaquil flooded grasslands,Flooded Grasslands & Savannas,7.384958610470806e-4,7.384958610470806e-4,7.384958610470806e-4,21,1
+582,Guayaquil flooded grasslands,Flooded Grasslands & Savannas,7.384958610470806e-4,NA,NA,21,1
 347,Atlantic coastal pine barrens,Temperate Conifer Forests,7.379787946833417e-4,7.18963922866221e-4,7.49378050070094e-4,124,3
 151,Seram rain forests,Tropical & Subtropical Moist Broadleaf Forests,7.37658164628859e-4,7.266879998211402e-4,7.642999934476046e-4,144,2
 505,Southwest Amazon moist forests,Tropical & Subtropical Moist Broadleaf Forests,7.361056365646787e-4,6.589362750793273e-4,8.503535541221569e-4,5576,10
@@ -290,15 +290,15 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 254,North Western Ghats montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,7.255570601193687e-4,6.974245303641318e-4,7.866448390164546e-4,111,4
 306,Eastern Himalayan broadleaf forests,Temperate Broadleaf & Mixed Forests,7.22765704403151e-4,5.455966702178485e-4,7.875665776386704e-4,537,4
 483,Napo moist forests,Tropical & Subtropical Moist Broadleaf Forests,7.208335330833702e-4,5.990975208749221e-4,8.010185116751518e-4,2041,5
-655,Central Korean deciduous forests,Temperate Broadleaf & Mixed Forests,7.185816287127292e-4,7.185816287127292e-4,7.185816287127292e-4,87,1
+655,Central Korean deciduous forests,Temperate Broadleaf & Mixed Forests,7.185816287127292e-4,NA,NA,87,1
 81,Highveld grasslands,Montane Grasslands & Shrublands,7.159857878236678e-4,5.837946348557515e-4,8.345524193656102e-4,203,4
 667,Huang He Plain mixed forests,Temperate Broadleaf & Mixed Forests,7.033316658853749e-4,6.411225732375422e-4,7.918726854875465e-4,233,3
-653,Central China Loess Plateau mixed forests,Temperate Broadleaf & Mixed Forests,6.956382167118136e-4,6.956382167118136e-4,6.956382167118136e-4,16,1
-135,Admiralty Islands lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,6.88705244101584e-4,6.88705244101584e-4,6.88705244101584e-4,15,1
+653,Central China Loess Plateau mixed forests,Temperate Broadleaf & Mixed Forests,6.956382167118136e-4,NA,NA,16,1
+135,Admiralty Islands lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,6.88705244101584e-4,NA,NA,15,1
 573,Miskito pine forests,"Tropical & Subtropical Grasslands, Savannas & Shrublands",6.886823027597449e-4,4.3493173941369016e-4,7.564949533091216e-4,147,2
 680,Sichuan Basin evergreen broadleaf forests,Temperate Broadleaf & Mixed Forests,6.886487968066441e-4,5.711440780473908e-4,8.369478619630065e-4,875,4
 681,Southern Korea evergreen forests,Temperate Broadleaf & Mixed Forests,6.873420118253031e-4,6.860730770443167e-4,6.875697693500954e-4,46,2
-160,Vogelkop montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,6.865695824421108e-4,6.865695824421108e-4,6.865695824421108e-4,174,1
+160,Vogelkop montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,6.865695824421108e-4,NA,NA,174,1
 469,Iquitos várzea,Tropical & Subtropical Moist Broadleaf Forests,6.852418018161779e-4,6.218277969555458e-4,7.650977352157139e-4,924,7
 659,Daba Mountains evergreen forests,Temperate Broadleaf & Mixed Forests,6.725454522630555e-4,5.769054902285883e-4,8.069287806003551e-4,1557,4
 80,Ethiopian montane moorlands,Montane Grasslands & Shrublands,6.712159498689558e-4,6.105204107194779e-4,7.530229808965131e-4,108,2
@@ -320,7 +320,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 527,Central American dry forests,Tropical & Subtropical Dry Broadleaf Forests,6.216840385261677e-4,4.4628771391396155e-4,6.998909912561593e-4,530,7
 14,Guinean montane forests,Tropical & Subtropical Moist Broadleaf Forests,6.203188208486262e-4,6.131252653759498e-4,6.314435993399786e-4,257,3
 436,Tamaulipan matorral,Deserts & Xeric Shrublands,6.164684201711056e-4,5.78429683594516e-4,6.836747684839951e-4,89,3
-259,Northern Triangle subtropical forests,Tropical & Subtropical Moist Broadleaf Forests,6.132173268860764e-4,6.132173268860764e-4,6.132173268860764e-4,468,1
+259,Northern Triangle subtropical forests,Tropical & Subtropical Moist Broadleaf Forests,6.132173268860764e-4,NA,NA,468,1
 139,Central Range Papuan montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,6.049982981598338e-4,5.86771938413886e-4,6.307625346112067e-4,1400,4
 699,Honshu alpine conifer forests,Temperate Conifer Forests,6.03938678978011e-4,5.805762019008398e-4,6.62344871670939e-4,14,2
 683,Taiheiyo montane deciduous forests,Temperate Broadleaf & Mixed Forests,6.022216160546648e-4,5.38912293958967e-4,6.711974784466488e-4,317,4
@@ -328,7 +328,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 279,Sumatran montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,5.960572467598951e-4,2.785354359319931e-4,8.666378383825865e-4,588,6
 327,Sierra Madre Oriental pine-oak forests,Tropical & Subtropical Coniferous Forests,5.957886784041411e-4,4.416810818860105e-4,8.322656855549818e-4,151,5
 432,Meseta Central matorral,Deserts & Xeric Shrublands,5.91881966101937e-4,3.518648736644536e-4,6.103448193663588e-4,14,2
-564,Belizian pine savannas,"Tropical & Subtropical Grasslands, Savannas & Shrublands",5.891330967036386e-4,5.891330967036386e-4,5.891330967036386e-4,15,1
+564,Belizian pine savannas,"Tropical & Subtropical Grasslands, Savannas & Shrublands",5.891330967036386e-4,NA,NA,15,1
 305,Sumatran tropical pine forests,Tropical & Subtropical Coniferous Forests,5.88471901469997e-4,3.656976086858778e-4,7.24268815247342e-4,21,3
 491,Pernambuco coastal forests,Tropical & Subtropical Moist Broadleaf Forests,5.851986877918605e-4,5.838058052319742e-4,7.272727089002728e-4,103,2
 444,Bolivian Yungas,Tropical & Subtropical Moist Broadleaf Forests,5.83287449484792e-4,4.6468900317060094e-4,9.006741488437084e-4,203,3
@@ -340,28 +340,28 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 16,Kwazulu Natal-Cape coastal forests,Tropical & Subtropical Moist Broadleaf Forests,5.672101927784217e-4,4.512635350693017e-4,5.824175786983687e-4,34,3
 309,Eastern Himalayan subalpine conifer forests,Temperate Conifer Forests,5.670427876369407e-4,5.561189168864595e-4,6.330213897551099e-4,150,3
 451,Central American montane forests,Tropical & Subtropical Moist Broadleaf Forests,5.658785105539448e-4,4.2277775029825576e-4,6.265255108922469e-4,99,4
-461,Eastern Panamanian montane forests,Tropical & Subtropical Moist Broadleaf Forests,5.641894253626974e-4,5.641894253626974e-4,5.641894253626974e-4,22,1
+461,Eastern Panamanian montane forests,Tropical & Subtropical Moist Broadleaf Forests,5.641894253626974e-4,NA,NA,22,1
 229,Eastern Java-Bali montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,5.637648108407972e-4,5.024494235648921e-4,5.745517771208176e-4,127,2
 704,Nujiang Langcang Gorge alpine conifer and mixed forests,Temperate Conifer Forests,5.621852698303493e-4,4.4284747491474263e-4,5.902647509869627e-4,42,2
 78,East African montane moorlands,Montane Grasslands & Shrublands,5.549696797970682e-4,4.849226340108241e-4,7.274531914542118e-4,23,3
-218,Andaman Islands rain forests,Tropical & Subtropical Moist Broadleaf Forests,5.462208831555803e-4,5.462208831555803e-4,5.462208831555803e-4,22,1
+218,Andaman Islands rain forests,Tropical & Subtropical Moist Broadleaf Forests,5.462208831555803e-4,NA,NA,22,1
 4,Comoros forests,Tropical & Subtropical Moist Broadleaf Forests,5.382451054174453e-4,5.002423567930236e-4,6.142506026662886e-4,12,2
 289,Western Java rain forests,Tropical & Subtropical Moist Broadleaf Forests,5.367942598517218e-4,5.142330373185972e-4,8.382942337034779e-4,316,2
 466,Guianan piedmont moist forests,Tropical & Subtropical Moist Broadleaf Forests,5.36168229773466e-4,5.170681771356283e-4,5.649583191478405e-4,1600,5
-489,Pantanos de Centla,Tropical & Subtropical Moist Broadleaf Forests,5.296258314047009e-4,5.296258314047009e-4,5.296258314047009e-4,27,1
+489,Pantanos de Centla,Tropical & Subtropical Moist Broadleaf Forests,5.296258314047009e-4,NA,NA,27,1
 459,Cuban moist forests,Tropical & Subtropical Moist Broadleaf Forests,5.242559851172405e-4,4.094470350537449e-4,5.464936239220898e-4,111,4
 442,Bahia coastal forests,Tropical & Subtropical Moist Broadleaf Forests,5.233086986683742e-4,4.304958790352073e-4,5.557089613370353e-4,499,5
 706,Qionglai-Minshan conifer forests,Temperate Conifer Forests,5.051917358358517e-4,4.742936109996414e-4,5.196504737399757e-4,229,2
 751,Eastern Himalayan alpine shrub and meadows,Montane Grasslands & Shrublands,5.021824515467786e-4,4.644646605074003e-4,6.144481298943501e-4,54,3
 600,Cuban cactus scrub,Deserts & Xeric Shrublands,4.956415661861404e-4,4.1562761180102825e-4,5.301607598084956e-4,13,3
-307,Northern Triangle temperate forests,Temperate Broadleaf & Mixed Forests,4.944547404663574e-4,4.944547404663574e-4,4.944547404663574e-4,58,1
-697,Hengduan Mountains subalpine conifer forests,Temperate Conifer Forests,4.922154701254781e-4,4.922154701254781e-4,4.922154701254781e-4,31,1
+307,Northern Triangle temperate forests,Temperate Broadleaf & Mixed Forests,4.944547404663574e-4,NA,NA,58,1
+697,Hengduan Mountains subalpine conifer forests,Temperate Conifer Forests,4.922154701254781e-4,NA,NA,31,1
 150,Queensland tropical rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.859300561606531e-4,4.856167491341598e-4,5.0378855667077e-4,116,2
 464,Guianan Highlands moist forests,Tropical & Subtropical Moist Broadleaf Forests,4.8355973450038927e-4,4.5060674416741236e-4,5.241035380632342e-4,805,4
 245,Mentawai Islands rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.799202603559631e-4,4.5267035020515325e-4,4.875892602071604e-4,48,3
-542,Patía valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,4.797039547979477e-4,4.797039547979477e-4,4.797039547979477e-4,21,1
+542,Patía valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,4.797039547979477e-4,NA,NA,21,1
 605,Motagua Valley thornscrub,Deserts & Xeric Shrublands,4.770669183926657e-4,3.326679838614331e-4,6.065105456703653e-4,20,3
-143,Louisiade Archipelago rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.7624864673707635e-4,4.7624864673707635e-4,4.7624864673707635e-4,10,1
+143,Louisiade Archipelago rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.7624864673707635e-4,NA,NA,10,1
 454,Chocó-Darién moist forests,Tropical & Subtropical Moist Broadleaf Forests,4.6927956800315896e-4,4.298355715246334e-4,4.90155779879834e-4,601,2
 513,Venezuelan Andes montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.608743076555823e-4,4.4610631583189524e-4,5.324422680319119e-4,228,2
 512,Ucayali moist forests,Tropical & Subtropical Moist Broadleaf Forests,4.5859390015636815e-4,4.2808452335854966e-4,4.6386984666651354e-4,701,4
@@ -376,7 +376,7 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 460,Eastern Cordillera Real montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.4172107338438316e-4,4.1802113949982584e-4,4.476893049100563e-4,343,2
 457,Cordillera Oriental montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.411905792870681e-4,4.198892409996396e-4,4.978848691933838e-4,463,4
 538,Magdalena Valley dry forests,Tropical & Subtropical Dry Broadleaf Forests,4.4105283671592456e-4,3.935481429586864e-4,4.5044747680696027e-4,171,3
-141,Huon Peninsula montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.2792355679921457e-4,4.2792355679921457e-4,4.2792355679921457e-4,128,1
+141,Huon Peninsula montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.2792355679921457e-4,NA,NA,128,1
 486,Northwest Andean montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.2613694734307836e-4,3.860064675290013e-4,5.385645019990253e-4,509,3
 532,Hispaniolan dry forests,Tropical & Subtropical Dry Broadleaf Forests,4.22124076049111e-4,4.1601268957942877e-4,7.246377062983811e-4,101,2
 593,Northern Andean páramo,Montane Grasslands & Shrublands,4.197581334405446e-4,3.409766068216413e-4,4.4472112980050343e-4,14,5
@@ -385,22 +385,22 @@ ECO_ID,ECO_NAME,BIOME_NAME,mean,lo,hi,n_cells,n_blocks
 468,Hispaniolan moist forests,Tropical & Subtropical Moist Broadleaf Forests,4.099835677612803e-4,3.924221094083888e-4,4.4713280658470467e-4,324,2
 477,Magdalena Valley montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.094677808396726e-4,3.9974722356109465e-4,4.38567538297836e-4,627,4
 240,Luzon montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.056921285970522e-4,3.8834408261672644e-4,5.895814159885049e-4,58,2
-499,Santa Marta montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.0358927713789265e-4,4.0358927713789265e-4,4.0358927713789265e-4,34,1
+499,Santa Marta montane forests,Tropical & Subtropical Moist Broadleaf Forests,4.0358927713789265e-4,NA,NA,34,1
 153,Southeast Papuan rain forests,Tropical & Subtropical Moist Broadleaf Forests,4.0161705160086984e-4,3.576745482860133e-4,4.061440270308701e-4,607,3
 448,Cauca Valley montane forests,Tropical & Subtropical Moist Broadleaf Forests,3.997340999103064e-4,3.682264156742107e-4,4.298598681711347e-4,223,2
 514,Veracruz moist forests,Tropical & Subtropical Moist Broadleaf Forests,3.9754607415358933e-4,2.764138393104076e-4,4.177347799607863e-4,175,2
 195,Papuan Central Range sub-alpine grasslands,Montane Grasslands & Shrublands,3.9416883373633027e-4,3.89568394748494e-4,4.0782354335533455e-4,112,4
 144,New Britain-New Ireland lowland rain forests,Tropical & Subtropical Moist Broadleaf Forests,3.845232315707187e-4,3.6328857648635867e-4,4.135905963150745e-4,229,4
-453,Chimalapas montane forests,Tropical & Subtropical Moist Broadleaf Forests,3.7650601007044315e-4,3.7650601007044315e-4,3.7650601007044315e-4,10,1
+453,Chimalapas montane forests,Tropical & Subtropical Moist Broadleaf Forests,3.7650601007044315e-4,NA,NA,10,1
 557,Sierra Madre de Oaxaca pine-oak forests,Tropical & Subtropical Coniferous Forests,3.697576591678496e-4,3.616974543547258e-4,4.1811888804659246e-4,35,2
 283,Taiwan subtropical evergreen forests,Tropical & Subtropical Moist Broadleaf Forests,3.6361929162721866e-4,3.6202896368003597e-4,3.9635354187339544e-4,259,2
 145,New Britain-New Ireland montane rain forests,Tropical & Subtropical Moist Broadleaf Forests,3.581761399915592e-4,3.548204430054674e-4,3.642723720986396e-4,87,3
 17,Madagascar humid forests,Tropical & Subtropical Moist Broadleaf Forests,3.5458320437684515e-4,3.172117642613805e-4,3.8622847577143046e-4,53,3
 502,Sierra Madre de Chiapas moist forests,Tropical & Subtropical Moist Broadleaf Forests,3.452492850594857e-4,3.0863286213532676e-4,3.7168792321743376e-4,94,3
-495,Puerto Rican moist forests,Tropical & Subtropical Moist Broadleaf Forests,3.425830800551921e-4,3.425830800551921e-4,3.425830800551921e-4,63,1
-487,Oaxacan montane forests,Tropical & Subtropical Moist Broadleaf Forests,3.292840326118261e-4,3.292840326118261e-4,3.292840326118261e-4,43,1
-528,Chiapas Depression dry forests,Tropical & Subtropical Dry Broadleaf Forests,3.196544009066808e-4,3.196544009066808e-4,3.196544009066808e-4,12,1
-555,Hispaniolan pine forests,Tropical & Subtropical Coniferous Forests,3.1653919503233345e-4,3.1653919503233345e-4,3.1653919503233345e-4,53,1
-269,South Taiwan monsoon rain forests,Tropical & Subtropical Moist Broadleaf Forests,3.088403318542987e-4,3.088403318542987e-4,3.088403318542987e-4,20,1
-452,Chiapas montane forests,Tropical & Subtropical Moist Broadleaf Forests,2.9962653321777716e-4,2.9962653321777716e-4,2.9962653321777716e-4,38,1
+495,Puerto Rican moist forests,Tropical & Subtropical Moist Broadleaf Forests,3.425830800551921e-4,NA,NA,63,1
+487,Oaxacan montane forests,Tropical & Subtropical Moist Broadleaf Forests,3.292840326118261e-4,NA,NA,43,1
+528,Chiapas Depression dry forests,Tropical & Subtropical Dry Broadleaf Forests,3.196544009066808e-4,NA,NA,12,1
+555,Hispaniolan pine forests,Tropical & Subtropical Coniferous Forests,3.1653919503233345e-4,NA,NA,53,1
+269,South Taiwan monsoon rain forests,Tropical & Subtropical Moist Broadleaf Forests,3.088403318542987e-4,NA,NA,20,1
+452,Chiapas montane forests,Tropical & Subtropical Moist Broadleaf Forests,2.9962653321777716e-4,NA,NA,38,1
 515,Veracruz montane forests,Tropical & Subtropical Moist Broadleaf Forests,2.808146407293928e-4,2.6309337408747524e-4,2.817234236341065e-4,41,2
