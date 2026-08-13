@@ -140,10 +140,14 @@ for (fr in FRACS) {
 }
 jk <- bind_rows(rows)
 write_csv(jk, file.path(outdir, "model2_jackknife_ranks.csv"))
-# --- summary: how often does each clade stay in the top 3? --------------------
+# --- summary: how far does each clade's slope move when species are dropped? --
+# Rank-stability statistics (share of replicates placing a clade first or in the top
+# three) are deliberately not reported: they were removed from the descriptive step and
+# from the Model-2 bootstrap, and reporting them here alone would be inconsistent. The
+# spread of the slope itself answers the same question without compressing it into a
+# frequency. `rank_full` is retained only to order the rows.
 summ <- jk |> group_by(continent, clade) |>
-  summarise(n_fits = n(), top1_freq = mean(rank == 1), top3_freq = mean(rank <= 3),
-            median_rank = median(rank),
+  summarise(n_fits = n(),
             slope_uni_mean = mean(slope_uni), slope_uni_sd = sd(slope_uni),
             slope_env_mean = mean(slope_env), slope_env_sd = sd(slope_env),
             .groups = "drop") |>

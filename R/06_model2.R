@@ -16,7 +16,7 @@
 # direction. Direction is not reported as a statistic; the unconstrained response curves
 # (model2_curves*.csv, FIG_M2_shape_unconstrained_*) are where the shape can be read.
 #
-# Also: variance partitioning (unique clade vs shared with environment) + residual Moran.
+# Also: variance partitioning (unique clade vs shared with environment).
 # Honest spatial block-bootstrap CIs (7 deg blocks); R2 out-of-bag.
 # Inputs (paths in R/config.R): the predictor stack, the per-clade richness stack,
 # and the Biogeography rasters folder (Relative_Richness_*.tif).
@@ -244,35 +244,28 @@ env <- bind_rows(erows) |>
          slope_uni=slope_std, slope_uni_lo=slope_std_lo, slope_uni_hi=slope_std_hi)
 write_csv(env, file.path(outdir,"model2_env_results.csv"))
 
-# ---- diagnostics: variance partitioning + residual Moran ---------------------
+# ---- diagnostics: variance partitioning -------------------------------------
 # These fits are UNCONSTRAINED on purpose. Partitioning asks how much variance a clade
 # explains uniquely versus jointly with environment; a monotone constraint deliberately
 # restricts the fit, so partitioning a constrained R2 would measure the constraint as much
 # as the data.
-message("diagnostics (variance partitioning + residual autocorrelation)")
-hav <- function(lo1,la1,lo2,la2){ R<-6371; 2*R*asin(sqrt(sin((la2-la1)*pi/360)^2 +
-  cos(la1*pi/180)*cos(la2*pi/180)*sin((lo2-lo1)*pi/360)^2)) }
+message("diagnostics (variance partitioning)")
 foldsf <- function(sub, deg=7, k=5, seed=1){ b <- blocks(sub, deg); set.seed(seed)
   u <- unique(b); f <- setNames(sample(0:(k-1), length(u), TRUE), as.character(u)); as.integer(f[as.character(b)]) }
 cvfit <- function(sub, feats, fo){ X <- as.matrix(sub[,feats,drop=FALSE]); y <- sub$rel; oof <- rep(NA_real_, nrow(sub))
   for (f in unique(fo)){ tr <- fo!=f; te <- fo==f; if (sum(te)<10) next
     m <- catboost.train(catboost.load_pool(X[tr,,drop=FALSE], label=y[tr]), NULL, params=cbp)
     oof[te] <- catboost.predict(m, Pm(X[te,,drop=FALSE])) }
-  ok <- is.finite(oof); list(r2=r2(y[ok], oof[ok]), resid=y-oof) }
-moran <- function(sub, v, seed=3){ ok <- is.finite(v); sub <- sub[ok,]; v <- v[ok]
-  set.seed(seed); i <- sample(nrow(sub), min(2000, nrow(sub))); z <- scale(v[i])[,1]
-  D <- outer(seq_along(i), seq_along(i), function(a,b) hav(sub$lon[i][a],sub$lat[i][a],sub$lon[i][b],sub$lat[i][b]))
-  W <- (D>0 & D<300)*1; sum(W*outer(z,z))/sum(W) }
+  ok <- is.finite(oof); r2(y[ok], oof[ok]) }
 drows <- list(); di <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
   for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (!nrow(sub)) next
     fo <- foldsf(sub)
     act <- CLADES[sapply(CLADES, function(c) sum(sub[[c]]>0)>0)]
-    r2e <- cvfit(sub, ENV, fo)$r2
+    r2e <- cvfit(sub, ENV, fo)
     for (cl in act){ rc <- cvfit(sub, cl, fo); rf <- cvfit(sub, c(ENV,cl), fo)
       di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
-        r2_env=r2e, r2_clade=rc$r2, r2_full=rf$r2, unique_clade=rf$r2-r2e, shared=r2e+rc$r2-rf$r2,
-        max_corr_env=max(abs(cor(sub[[cl]], sub[,ENV], method="spearman"))), resid_moran=moran(sub, rf$resid)) }
+        r2_env=r2e, r2_clade=rc, r2_full=rf, unique_clade=rf-r2e, shared=r2e+rc-rf) }
     message(sprintf("  %s/%s: %d clades", cond, cont, length(act))) } }
 write_csv(bind_rows(drows), file.path(outdir,"model2_diagnostics.csv"))
 
