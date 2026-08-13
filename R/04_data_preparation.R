@@ -16,13 +16,7 @@ create_project_dirs()
 
 # ---- Helpers -----------------------------------------------------------------
 # Reproject onto the analysis grid, then discard anything outside the source's own
-# range. Bilinear resampling is a convex combination, so a projected value CANNOT
-# legitimately fall outside [min(source), max(source)] -- but terra >= 1.8 emits a
-# large negative fill value (~ -2.7e37) wherever the interpolation window touches
-# the source NA mask instead of propagating NA. Those are finite numbers, so
-# `as.data.frame(..., na.rm = TRUE)` keeps them and they reach the models: without
-# this clamp ~14k cells of vpi/cold/dry_mean carry -2.7e37 and the ALE grids,
-# VIF and concurvity computed from them are meaningless.
+# range. 
 align_to_template <- function(x, template, method = "bilinear") {
   out <- terra::project(x, template, method = method)
   lo <- suppressWarnings(min(terra::global(x, "min", na.rm = TRUE)[, 1], na.rm = TRUE))
@@ -42,10 +36,6 @@ load_large_herbivore_traits <- function(traits_csv) {
     mutate(species_name = gsub("_", " ", Binomial.1.2))
 }
 
-# Every megafauna layer is built the same way: sum the species ranges in the source CRS,
-# then bilinear-reproject once. Because bilinear resampling is linear it commutes with
-# summation, so summing the clade layers reproduces total megafauna richness EXACTLY --
-# Model 1's `mammal_richness` is derived that way below rather than computed separately.
 build_clade_richness_stack <- function(large_mammals, ranges_dir, template, output_dir) {
   clades <- sort(unique(large_mammals$Order.1.2))
   all_tifs <- list.files(ranges_dir, "\\.tif$", full.names = TRUE, recursive = TRUE)
@@ -56,7 +46,7 @@ build_clade_richness_stack <- function(large_mammals, ranges_dir, template, outp
 
   for (clade in clades) {
     species <- large_mammals %>% filter(Order.1.2 == clade) %>% pull(species_name)
-    idx <- match(tolower(paste0(gsub(" ", "_", species), ".tif")), tif_key)  # first hit per species
+    idx <- match(tolower(paste0(gsub(" ", "_", species), ".tif")), tif_key) 
     sp_paths <- all_tifs[idx[!is.na(idx)]]
     message("Building clade richness layer: ", clade,
             " (", length(sp_paths), "/", length(species), " ranges found)")
@@ -65,8 +55,6 @@ build_clade_richness_stack <- function(large_mammals, ranges_dir, template, outp
       clade_raster <- template
       terra::values(clade_raster) <- 0
     } else {
-      # NB plain sum(): terra provides it through the S4 Summary group generic,
-      # `terra::sum` is not an exported object.
       clade_raster <- align_to_template(
         sum(terra::rast(sp_paths), na.rm = TRUE), template, method = "bilinear")
     }
@@ -76,9 +64,6 @@ build_clade_richness_stack <- function(large_mammals, ranges_dir, template, outp
     terra::writeRaster(clade_raster, file.path(output_dir, paste0("richness_", clade, ".tif")), overwrite = TRUE)
   }
 
-  # Absence is kept as 0. Writing it as NA would make "no species of this clade here"
-  # indistinguishable from "no data" for anyone reading Clade_richness_stack.tif from
-  # Dryad; 06_model2.R needs the zeros and would otherwise have to invent them back.
   terra::rast(clade_layers)
 }
 
@@ -100,8 +85,6 @@ height <- align_to_template(height_nc, trunk_richness)
 
 large_mammals <- load_large_herbivore_traits(require_file(paths$mammal_traits, "PHYLACINE traits"))
 
-# Clade layers first: Model 1's total megafauna richness is their sum, so the two models
-# share one definition of "megafauna richness" by construction.
 message("Preparing mammal clade richness stack...")
 clade_stack <- build_clade_richness_stack(
   large_mammals = large_mammals,
@@ -137,8 +120,6 @@ names(predictor_stack) <- c(
   "consumption"
 )
 
-# Guard: the models read this stack with na.rm = TRUE, which drops NA but happily
-# keeps any finite fill value. Fail loudly here rather than train on nonsense.
 guard <- as.data.frame(predictor_stack, na.rm = TRUE)
 offending <- names(guard)[vapply(guard, function(v) any(abs(v) > 1e30), logical(1))]
 if (length(offending))
