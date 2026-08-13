@@ -1,6 +1,6 @@
 # =============================================================================
 # 02_descriptive.R — richness maps, biome & ecoregion distributions (block-bootstrap
-# CIs + rank-stability), and the Fig-3 composite.
+# CIs), and the Fig-3 composite.
 # Inputs (paths from R/config.R): the Biogeography rasters folder (Absolute_/Relative_
 # Richness_*.tif), the Ecoregions2017 shapefile, and data/assets/world_borders.geojson.
 # =============================================================================
@@ -16,9 +16,7 @@ outdir <- paths$descriptive
 theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
           plot.title=element_text(face="bold",size=11), plot.title.position="plot",
           axis.line=element_line(colour="grey30")))
-# Full WWF biome palette so nothing that reaches a figure falls back to grey.
-# Warm = dry/open, green = forest, purple = flooded, blue = mangrove; temperate
-# tones are lighter than their tropical counterpart.
+
 BCOL <- c(
   "Tropical & Subtropical Moist Broadleaf Forests"           = "#2e8b57",
   "Tropical & Subtropical Dry Broadleaf Forests"             = "#c0392b",
@@ -36,9 +34,7 @@ BCOL <- c(
   "Mangroves"                                                = "#2c6fbb")
 GREY <- "#9e9e9e"
 bcol <- function(b) ifelse(b %in% names(BCOL), BCOL[b], GREY)
-# In the biome panel only biomes that also appear among the plotted ecoregions are
-# coloured; the rest stay grey. The colours then function purely as the key for the
-# ecoregion panel, which carries no legend of its own in the composite.
+
 bcol_keyed <- function(b, keyed) ifelse(b %in% keyed, bcol(b), GREY)
 blab <- function(b) gsub("Xeric Shrublands","Xeric Shrub.", gsub("Grasslands, Savannas & Shrublands","Grasslands & Savannas",
         gsub("Tropical & Subtropical","Trop./Subtrop.", b)))
@@ -47,11 +43,7 @@ EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
 # ---- borders + maps ----------------------------------------------------------
 message("maps")
 borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
-# Full land extent (-58/84, -180/180) so no country is sliced at the poles or the
-# dateline. `inset` puts the colourbar inside the map, in the empty South Pacific:
-# outside on the right it consumes panel width, which shifts the map frame off centre
-# relative to panels B/C below. Used for the composite; the standalone maps, which
-# have nothing to align with, keep the colourbar on the right.
+
 mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
   r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
   vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
@@ -62,8 +54,6 @@ mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
       guide=guide_colourbar(barwidth=unit(.38,"cm"), barheight=unit(if (inset) 4.4 else 5.4,"cm"))) +
     coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
     theme_void(base_size=11) +
-    # theme_void leaves no axis strip, so the map panel starts immediately below the
-    # title; this bottom margin keeps the Arctic coastlines off the title text.
     theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=10)),
           plot.title.position="plot",
           legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
@@ -91,22 +81,16 @@ eco <- st_read(ECOSHP, quiet=TRUE) |> st_make_valid()
 tmpl <- rast(ext(-180,180,-90,90), resolution=0.1, crs="EPSG:4326")
 eco_id <- rasterize(vect(eco), tmpl, field="ECO_ID")
 lut <- eco |> st_drop_geometry() |> distinct(ECO_ID, ECO_NAME, BIOME_NAME)
-# Cell -> lon/lat from the template itself, not from an assumed 3600-column grid.
 n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
 col0 <- (seq_len(n)-1) %% nc; row0 <- (seq_len(n)-1) %/% nc
 lon <- ev[["xmin"]] + (col0+0.5)*rs[1]; lat <- ev[["ymax"]] - (row0+0.5)*rs[2]
-blk5 <- floor((lon+180)/5)*1000 + floor((lat+90)/5)   # 5 deg block id for the bootstrap
+blk5 <- floor((lon+180)/5)*1000 + floor((lat+90)/5)   
 eid <- values(eco_id)[,1]
 
 # 5 deg blocks: at or above the measured range of within-ecoregion autocorrelation
 # (375-525 km across all three conditions), which is the dependence a block bootstrap
-# on an ecoregion mean has to absorb. NB this is a different quantity from Model 1's
-# 7 deg, which is the range of its residuals after the environmental predictors are
-# fitted -- the two differ because they were measured on different things.
-#
-# resample() rather than sample(x, ...): with a single block, sample(41005, 1, TRUE)
-# draws from 1:41005 instead of returning 41005, the lookup misses, and mean(NULL) is
-# NaN -- which blanked the CI for the 54 ecoregions that occupy only one 5 deg block.
+# on an ecoregion mean has to absorb. 
+
 resample <- function(x) x[sample.int(length(x), length(x), replace=TRUE)]
 boot <- function(v, b, nb=1000, seed=0){ set.seed(seed); ub <- unique(b); by <- split(v, b)
   o <- numeric(nb); for (i in 1:nb) o[i] <- mean(unlist(by[as.character(resample(ub))])); o }
@@ -116,31 +100,19 @@ summarise_cond <- function(relfile, tag){
   keep <- is.finite(rel) & rel>0 & is.finite(eid)
   d <- data.frame(rel=rel[keep], ECO_ID=eid[keep], blk=blk5[keep]) |>
        left_join(lut, by="ECO_ID") |> filter(!BIOME_NAME %in% EXCLUDE, !is.na(BIOME_NAME))
-  # biome
-  # n_blocks is what the interval actually rests on: a unit occupying a single 5 deg
-  # block has no between-block variation to resample, so its CI collapses onto the
-  # point estimate. Reported so a narrow interval can be read for what it is.
+
   bio <- d |> group_by(BIOME_NAME) |> group_modify(~{ bb <- boot(.x$rel,.x$blk)
       tibble(mean=mean(.x$rel), lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
              n_cells=nrow(.x), n_eco=n_distinct(.x$ECO_ID), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME)
   write_csv(bio, file.path(outdir, sprintf("biome_summary_%s.csv", tag)))
-  # ecoregion (>=10 cells) + rank stability (top-15 across block resamples)
+
   ec <- d |> group_by(ECO_ID) |> filter(n()>=10) |> group_modify(~{ bb <- boot(.x$rel,.x$blk, nb=400, seed=.y$ECO_ID%%9999)
       tibble(ECO_NAME=.x$ECO_NAME[1], BIOME_NAME=.x$BIOME_NAME[1], mean=mean(.x$rel),
              lo=quantile(bb,.025,na.rm=TRUE), hi=quantile(bb,.975,na.rm=TRUE),
              n_cells=nrow(.x), n_blocks=n_distinct(.x$blk)) }) |>
     ungroup() |> arrange(desc(mean))
-  # Seeded: without this the loop inherits the RNG state left by the per-ecoregion
-  # bootstraps above, so the stability percentages shift whenever anything upstream
-  # changes -- they moved by up to 3 points when the resample() bug was fixed, purely
-  # from the stream moving. Seeding makes them reproducible.
-  set.seed(11)
-  ub <- unique(d$blk); cnt <- setNames(numeric(nrow(ec)), ec$ECO_ID); NR <- 250
-  for (i in 1:NR){ s <- d[d$blk %in% resample(ub),]
-    mm <- s |> group_by(ECO_ID) |> summarise(m=mean(rel), k=n(), .groups="drop") |> filter(k>=10) |> arrange(desc(m)) |> head(15)
-    for (e in as.character(mm$ECO_ID)) if (e %in% names(cnt)) cnt[e] <- cnt[e]+1 }
-  ec$top15_freq <- as.numeric(cnt[as.character(ec$ECO_ID)])/NR
+
   write_csv(ec, file.path(outdir, sprintf("ecoregion_summary_%s.csv", tag)))
   list(bio=bio, ec=ec)
 }
@@ -152,8 +124,6 @@ S <- list(total=summarise_cond("Relative_Richness_Tot.tif","total"),
 # ---- biome & ecoregion figures + composite -----------------------------------
 message("figures + composite")
 XLAB <- expression("Mean relative richness ("%*%10^-3*", ± 95% CI)")
-# `keyed` = the biomes represented among the plotted ecoregions; only those are
-# coloured, so the biome panel reads as the key for the ecoregion panel.
 mk_biome <- function(bio, keyed) { bio$biome <- factor(bio$biome, levels=rev(bio$biome))
   ggplot(bio, aes(mean, biome)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey65",linewidth=.5) +
     geom_point(aes(colour=biome), size=3.1) +
@@ -161,13 +131,10 @@ mk_biome <- function(bio, keyed) { bio$biome <- factor(bio$biome, levels=rev(bio
     scale_y_discrete(labels=function(b) blab(as.character(b))) +
     scale_x_continuous(labels=label_number(scale=1e3)) +
     labs(x=XLAB, y=NULL) + theme(axis.text.y=element_text(size=9)) }
-# legend=TRUE for the standalone figure (nothing else to key off); FALSE in the
-# composite, where panel B supplies the key.
+
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
-  lab <- paste0(top$ECO_NAME, "  (", round(top$top15_freq*100), "%)")   # append rank stability
-  top$lab <- factor(lab, levels=rev(lab))
-  cap <- paste0(if (legend) "" else "Colours as in panel B.   ",
-                "(x%) = rank stability: share of spatial block-bootstrap resamples ranking the ecoregion in the global top 15")
+  top$lab <- factor(top$ECO_NAME, levels=rev(top$ECO_NAME))
+  cap <- if (legend) "" else "Colours as in panel B."
   ggplot(top, aes(mean, lab)) + geom_errorbarh(aes(xmin=lo,xmax=hi),height=0,colour="grey65",linewidth=.5) +
     geom_point(aes(colour=BIOME_NAME), size=3.1) +
     scale_colour_manual(values=sapply(sort(unique(top$BIOME_NAME)),bcol),
@@ -177,7 +144,7 @@ mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
     theme(axis.text.y=element_text(size=9), legend.position="right",
           legend.text=element_text(size=7), legend.title=element_text(size=8),
           plot.caption=element_text(hjust=0, size=7.5, colour="grey35")) }
-CLAB <- c(total="spiny", prickly="prickly", thorny="thorny")   # "total-trunk species" was wrong
+CLAB <- c(total="spiny", prickly="prickly", thorny="thorny")   
 RELF <- c(total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif",
           thorny="Relative_Richness_Thorny.tif")
 for (cond in names(S)){
@@ -191,19 +158,11 @@ for (cond in names(S)){
   ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)),
          mk_eco(ec, legend=TRUE) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness", CLAB[[cond]])),
          width=11, height=9, dpi=170)
-  # composite: A map, B biome (the key), C ecoregions (no legend of its own)
   pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (0.1°)", CLAB[[cond]]),
                expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
   pb <- mk_biome(bio, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
-  # free(side="l") releases ONLY the left edge. patchwork otherwise aligns plot panels
-  # down a column, indenting the map to start where panel B's panel starts -- i.e.
-  # after B's long biome labels (~450px). Freeing every side also lets the panel
-  # expand upwards into the space the title reserves, which silently puts the Arctic
-  # coastlines through the title text however large the title margin is; keeping the
-  # top aligned prevents that. Panel A's height is then set so the map is
-  # width-limited (spans the full width) rather than height-limited (shrinks and
-  # re-centres, reopening a gap on the left).
+ 
   comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.15))) +
           plot_layout(heights=c(1.12,1.03))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,

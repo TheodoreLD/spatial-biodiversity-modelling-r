@@ -36,11 +36,8 @@ CLADES <- c("Pilosa","Cetartiodactyla","Diprotodontia","Primates","Rodentia",
 DISP <- function(x) ifelse(x=="Cetartiodactyla", "Artiodactyla", x)
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
 CONTS <- c("Americas","Africa","Asia")
-B <- 200   # block-bootstrap resamples; 200 so the CIs and the rank-stability
-           # percentages are not limited by resample count (50 gave 2-point resolution)
-# Smallest slope_std usable as the DENOMINATOR of a retained-share ratio. Below this the
-# denominator carries no signal and the ratio explodes, so the share is reported as NA.
-SLOPE_MIN <- 0.02
+B <- 200   # block-bootstrap resamples; 200 so the confidence intervals are not limited
+           # by resample count (at 50 the 2.5/97.5 percentiles sat near the extremes)
 cbp <- list(loss_function="RMSE", depth=4, l2_leaf_reg=10, learning_rate=0.05,
             iterations=300, allow_writing_files=FALSE, logging_level="Silent")
 r2 <- function(a,p) 1 - sum((a-p)^2)/sum((a-mean(a))^2)
@@ -114,8 +111,9 @@ ale_at <- function(m, X, q){
 #   SDs of relative spiny-trunk richness per SD of clade richness,
 # i.e. standardised on BOTH axes, which is what makes it comparable across clades (whose
 # richness scales differ) and across continents (whose response scales differ).
-# The slope is measured on a 21-point QUANTILE grid, so it is weighted by where the cells
-# actually are rather than by the plotted x-range.
+# The slope is measured at the DISTINCT values of a 21-point quantile grid, so it spans the
+# range the data cover; unique() collapses repeated quantiles, so each distinct richness
+# level contributes equally to the fit rather than each cell.
 # sd(y) is the FULL-SAMPLE value, not each resample's own. That matters: it makes sd(y) a
 # per-continent constant, so ranking by the raw slope and by slope_std are identical and
 # cannot disagree, and the bootstrap CI reflects uncertainty in the slope alone.
@@ -127,7 +125,7 @@ std_slope <- function(m, q, mn, sdx, sdy){
   zslope(catboost.predict(m, P1(q)), q, mn, sdx) / sdy }
 # Same metric for the environment-adjusted model, where the clade effect is its ALE
 # (the model also sees four covariates). Identical grid and scaling, so the two conditions
-# live on one scale and `retained` downstream is a like-for-like ratio.
+# live on one scale, so the two are directly comparable.
 ale_std_slope <- function(m, X, mn, sdx, sdy, nq=21){
   q <- unique(quantile(X[,1], seq(0,1,length.out=nq)))
   if (length(q) < 3 || !is.finite(sdy) || sdy <= 0) return(NA_real_)
@@ -135,12 +133,11 @@ ale_std_slope <- function(m, X, mn, sdx, sdy, nq=21){
 
 # ---- core models: slope_std + R2 (mono & unconstrained) + curves --------------
 message("core models (constrained slope + unconstrained shape + R2)")
-rows <- list(); curves <- list(); ccur <- list(); rstab <- list(); draws <- list()
+rows <- list(); curves <- list(); ccur <- list(); draws <- list()
 ri <- 0; ci <- 0; cci <- 0; rsi <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
   for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (nrow(sub)<80) next
     bid <- blocks(sub); ublk <- unique(bid); y <- sub$rel
-    score_by_b <- list()   # clade -> slope_std in each resample, for rank stability
     for (cl in CLADES){ x <- sub[[cl]]
       # A clade that fits flat is a reported result, not an exclusion: it means no positive
       # association. Diprotodontia occupies only 10% of Asian cells and fits flat;
@@ -166,9 +163,6 @@ for (cond in names(tables)){ tab <- tables[[cond]]
           r2u <- c(r2u, r2(y[moob], catboost.predict(unc, Xo)))
           r2m <- c(r2m, r2(y[moob], catboost.predict(mono, Xo))) } }
       if (all(!is.finite(sl_b))) next
-      # Rank stability is measured on `slope_std`, the reported ranking metric, so the
-      # stability percentages describe the ranking the paper actually presents.
-      score_by_b[[DISP(cl)]] <- sl_b
       draws[[length(draws)+1]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
                                              b=seq_len(B), slope_std=sl_b)
       if (!length(r2u)) r2u <- NA_real_; if (!length(r2m)) r2m <- NA_real_
@@ -185,31 +179,11 @@ for (cond in names(tables)){ tab <- tables[[cond]]
       cci <- cci+1; ccur[[cci]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
         x=grid, y=rowMeans(pmm),
         y_lo=apply(pmm,1,function(v) quantile(v,.025)), y_hi=apply(pmm,1,function(v) quantile(v,.975))) }
-    # ---- rank stability -------------------------------------------------------
-    # Every clade saw the SAME blocks in resample b (per-iteration seed), so the
-    # clades can be re-ranked within each resample. top1/top3_freq = share of
-    # resamples in which the clade came 1st / in the top 3. A firm ranking gives
-    # values near 1 for the leaders; a soft one spreads them out.
-    if (length(score_by_b) >= 2) {
-      M <- do.call(cbind, score_by_b); nm <- colnames(M)
-      t1 <- setNames(numeric(ncol(M)), nm); t3 <- t1; nb <- 0
-      for (b in seq_len(nrow(M))) {
-        v <- M[b, ]; if (all(!is.finite(v))) next
-        o <- order(v, decreasing = TRUE, na.last = NA); nb <- nb + 1
-        t1[nm[o[1]]] <- t1[nm[o[1]]] + 1
-        for (k in seq_len(min(3, length(o)))) t3[nm[o[k]]] <- t3[nm[o[k]]] + 1
-      }
-      rsi <- rsi + 1
-      rstab[[rsi]] <- data.frame(condition = cond, continent = cont, clade = nm,
-                                 top1_freq = as.numeric(t1)/nb, top3_freq = as.numeric(t3)/nb,
-                                 n_resamples = nb, row.names = NULL)
-    }
     message(sprintf("  %s/%s done", cond, cont)) } }
 res <- bind_rows(rows); write_csv(res, file.path(outdir,"model2_results.csv"))
 write_csv(bind_rows(curves), file.path(outdir,"model2_curves.csv"))
 write_csv(bind_rows(ccur), file.path(outdir,"model2_curves_constrained.csv"))
 write_csv(bind_rows(draws), file.path(outdir,"model2_bootstrap_draws.csv"))
-rank_stab <- bind_rows(rstab)
 message(sprintf("  %d clade-continent-condition models", nrow(res)))
 
 # ---- condition 2: the same models WITH the environmental covariates ------------
@@ -218,13 +192,12 @@ message(sprintf("  %d clade-continent-condition models", nrow(res)))
 # environmental predictors. The block resamples are identical (same per-iteration
 # seeds), so the with/without comparison is paired.
 message("environment-adjusted models (shape + R2 + slope)")
-mono5 <- "(1,0,0,0,0)"; erows <- list(); ecur <- list(); ecc <- list(); estab <- list()
-ei <- 0; eci <- 0; ecci <- 0; esi <- 0
+mono5 <- "(1,0,0,0,0)"; erows <- list(); ecur <- list(); ecc <- list()
+ei <- 0; eci <- 0; ecci <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
   for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (nrow(sub)<80) next
     bid <- blocks(sub); ublk <- unique(bid); y <- sub$rel
     sdy_all <- sd(y)
-    escore_by_b <- list()   # clade -> slope_env per resample, for env rank stability
     for (cl in CLADES){ xc <- sub[[cl]]
       if (sum(xc>0)<30 || length(unique(xc))<5) next   # see core loop
       X <- as.matrix(sub[,c(cl,ENV)]); mn <- mean(xc); sdx <- sd(xc)
@@ -248,7 +221,6 @@ for (cond in names(tables)){ tab <- tables[[cond]]
       if (!any(is.finite(sl_e))) next
       if (!length(r2u)) r2u <- NA_real_; if (!length(r2m)) r2m <- NA_real_
       sle <- sl_e[is.finite(sl_e)]
-      escore_by_b[[DISP(cl)]] <- sl_e
       if (ncol(cmat)){ ecci <- ecci+1; ecc[[ecci]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
         x=grid, y=rowMeans(cmat), y_lo=apply(cmat,1,function(v) quantile(v,.025)),
         y_hi=apply(cmat,1,function(v) quantile(v,.975))) }
@@ -260,22 +232,6 @@ for (cond in names(tables)){ tab <- tables[[cond]]
       if (ncol(amat)){ eci <- eci+1; ecur[[eci]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
         x=grid, y=rowMeans(amat), y_lo=apply(amat,1,function(v) quantile(v,.025)),
         y_hi=apply(amat,1,function(v) quantile(v,.975))) } }
-    # Rank stability for the ENVIRONMENT-ADJUSTED ranking, by the same paired construction
-    # as the clade-alone one: every clade saw the same blocks in resample b, so they can be
-    # re-ranked inside each resample. Without this the adjusted ranking had CIs but no
-    # measure of how reliably the ORDER holds.
-    if (length(escore_by_b) >= 2) {
-      M <- do.call(cbind, escore_by_b); nm <- colnames(M)
-      t1 <- setNames(numeric(ncol(M)), nm); t3 <- t1; nb <- 0
-      for (b in seq_len(nrow(M))) {
-        v <- M[b, ]; if (all(!is.finite(v))) next
-        o <- order(v, decreasing=TRUE, na.last=NA); nb <- nb + 1
-        t1[nm[o[1]]] <- t1[nm[o[1]]] + 1
-        for (k in seq_len(min(3, length(o)))) t3[nm[o[k]]] <- t3[nm[o[k]]] + 1 }
-      esi <- esi + 1
-      estab[[esi]] <- data.frame(condition=cond, continent=cont, clade=nm,
-        top1_freq_env=as.numeric(t1)/nb, top3_freq_env=as.numeric(t3)/nb,
-        n_resamples=nb, row.names=NULL) }
     message(sprintf("  %s/%s done", cond, cont)) } }
 write_csv(bind_rows(ecur), file.path(outdir,"model2_curves_env.csv"))
 write_csv(bind_rows(ecc),  file.path(outdir,"model2_curves_env_constrained.csv"))
@@ -286,16 +242,7 @@ env <- bind_rows(erows) |>
             by=c("condition","continent","clade")) |>
   rename(r2_uni_unc=r2, r2_uni_mono=r2_mono,
          slope_uni=slope_std, slope_uni_lo=slope_std_lo, slope_uni_hi=slope_std_hi)
-# Share of the clade effect surviving environmental adjustment. Needs a floor on the
-# denominator: for clades with almost no unadjusted effect the ratio explodes and reports
-# nothing useful, so it is NA there rather than enormous.
-env$retained <- ifelse(env$slope_uni >= SLOPE_MIN, env$slope_env/env$slope_uni, NA_real_)
 write_csv(env, file.path(outdir,"model2_env_results.csv"))
-# one stability file carrying BOTH rankings, so they are read side by side
-rank_stab <- rank_stab |>
-  left_join(bind_rows(estab)[,c("condition","continent","clade","top1_freq_env","top3_freq_env")],
-            by=c("condition","continent","clade"))
-write_csv(rank_stab, file.path(outdir,"model2_rank_stability.csv"))
 
 # ---- diagnostics: variance partitioning + residual Moran ---------------------
 # These fits are UNCONSTRAINED on purpose. Partitioning asks how much variance a clade
@@ -330,11 +277,11 @@ for (cond in names(tables)){ tab <- tables[[cond]]
 write_csv(bind_rows(drows), file.path(outdir,"model2_diagnostics.csv"))
 
 # =============================================================================
-# figures (ggplot): slope ranking, constrained + unconstrained shapes, R2 (mono vs unc),
-# confounding synthesis — per condition, continents faceted
+# figures (ggplot): slope ranking (both settings), constrained + unconstrained shapes,
+# and the variance partition — per condition, continents faceted
 # =============================================================================
 message("figures")
-suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages({ library(ggplot2); library(tidyr) })
 theme_set(theme_minimal(base_size=10) + theme(panel.grid.minor=element_blank(),
           plot.title=element_text(face="bold",size=11), axis.line=element_line(colour="grey30"),
           strip.text=element_text(face="bold")))
@@ -349,19 +296,24 @@ env <- read_csv(file.path(outdir,"model2_env_results.csv"), show_col_types=FALSE
 cenv <- read_csv(file.path(outdir,"model2_curves_env.csv"), show_col_types=FALSE)
 cenvc <- read_csv(file.path(outdir,"model2_curves_env_constrained.csv"), show_col_types=FALSE)
 dia <- read_csv(file.path(outdir,"model2_diagnostics.csv"), show_col_types=FALSE)
-rst <- read_csv(file.path(outdir,"model2_rank_stability.csv"), show_col_types=FALSE)
 for (cond in c("total","prickly","thorny")){
+  # the ranking, both settings on one row per clade: filled = clade alone, open = clade
+  # plus the four environmental covariates, each with its block-bootstrap interval
   d <- res |> filter(condition==cond) |>
-    left_join(rst[,c("condition","continent","clade","top3_freq")], by=c("condition","continent","clade")) |>
-    mutate(continent=factor(continent,CONTS), s=slope_std,
-           lab=paste0(lab_ed(clade), "  (", round(top3_freq*100), "%)"))
+    left_join(env |> filter(condition==cond) |>
+                select(continent, clade, slope_env, slope_env_lo, slope_env_hi),
+              by=c("continent","clade")) |>
+    mutate(continent=factor(as.character(continent),CONTS), s=slope_std, lab=lab_ed(clade))
   ggsave(file.path(outdir,paste0("FIG_M2_rank_",cond,".png")),
-    ggplot(d, aes(s, reorder(lab,s), colour=continent)) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
-      geom_errorbarh(aes(xmin=slope_std_lo,xmax=slope_std_hi),height=0,colour="grey60") + geom_point(size=2.6) +
+    ggplot(d, aes(y=reorder(lab,s))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
+      geom_errorbarh(aes(xmin=slope_std_lo,xmax=slope_std_hi),height=0,colour="grey60") +
+      geom_errorbarh(aes(xmin=slope_env_lo,xmax=slope_env_hi),height=0,colour="grey80") +
+      geom_point(aes(x=s,colour=continent),size=2.6) +
+      geom_point(aes(x=slope_env,colour=continent),shape=21,fill="white",size=2.6,stroke=.9) +
       scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent, scales="free_y") +
       labs(x="Standardised slope (SDs of relative richness per SD of clade richness)", y=NULL,
       title=sprintf("Model 2 — mammal-clade association with relative %s-trunk richness (ED = endemic)",cond),
-      caption=paste("(x%) = rank stability: share of spatial block-bootstrap resamples placing the clade in the top 3.",
+      caption=paste("Filled = clade alone; open = clade + environmental covariates. Bars: 95% spatial block-bootstrap CI.",
                     "The slope is >= 0 by construction, so it ranks strength and not direction; read the shape from FIG_M2_shape_unconstrained_*.", sep="\n")) +
       theme(plot.caption=element_text(hjust=0, size=7.5, colour="grey30")),
     width=14, height=6, dpi=170)
@@ -428,47 +380,41 @@ for (cond in c("total","prickly","thorny")){
       caption="Both curves are non-decreasing by construction; the reported slope is the standardised linear trend through each.") +
       theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
-  # R2 of the CONSTRAINED model, clade alone vs environment-adjusted. The unconstrained R2
-  # is not plotted: the constrained model is the one the ranking is taken from, so its skill
-  # with and without the environmental covariates is the comparison that bears on the result.
-  # NB re-apply the factor: joining against env (character) drops the level order and the
-  # facets would fall back to alphabetical.
-  d2 <- d |> left_join(env |> filter(condition==cond) |>
-                         select(continent, clade, r2_env_mono, r2_env_mono_lo, r2_env_mono_hi),
-                       by=c("continent","clade")) |>
-    mutate(continent = factor(as.character(continent), CONTS))
-  ggsave(file.path(outdir,paste0("FIG_M2_r2_mono_",cond,".png")),
-    ggplot(d2, aes(y=reorder(clade,r2_mono))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
-      geom_segment(aes(x=r2_mono,xend=r2_env_mono,yend=reorder(clade,r2_mono)),colour="grey78",linewidth=.9) +
-      geom_errorbarh(aes(xmin=r2_mono_lo,xmax=r2_mono_hi),height=0,colour="grey60") +
-      geom_point(aes(x=r2_mono,colour=continent),size=2.4) +
-      geom_point(aes(x=r2_env_mono,colour=continent),shape=21,fill="white",size=2.4,stroke=.9) +
-      scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent,scales="free_y") +
-      labs(x="Out-of-bag R² of the constrained model (filled = clade alone, open = + environment)", y=NULL,
-      title=sprintf("Model 2 — constrained clade-model R², with and without environmental covariates, relative %s-trunk richness",cond),
-      caption=paste("Bars: 95% spatial block-bootstrap CI on the clade-alone value.",
-                    "R² is out-of-bag, so a negative value means the model predicts worse than the response mean.", sep="\n")) +
-      theme(plot.caption=element_text(hjust=0,size=7,colour="grey30")),
-    width=14, height=5.4, dpi=170)
-  m <- env |> filter(condition==cond) |> left_join(dia[,c("condition","continent","clade","r2_clade","shared")],
-        by=c("condition","continent","clade")) |>
-    mutate(continent=factor(continent,CONTS), conf=ifelse(r2_clade>0.01, pmin(pmax(shared/r2_clade,0),1), NA_real_),
-           retlab=ifelse(!is.na(retained), sprintf("%.0f%%",retained*100),"n/a"),
-           lab=paste0(clade, "  (ret ",retlab,")"))
-  ggsave(file.path(outdir,paste0("FIG_M2_confounding_synthesis_",cond,".png")),
-    ggplot(m, aes(y=reorder(lab,slope_env))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
-      geom_segment(aes(x=slope_uni,xend=slope_env,yend=reorder(lab,slope_env)),colour="grey75",linewidth=1) +
-      geom_point(aes(x=slope_uni),shape=1,size=2.3,colour="grey50") +
-      geom_errorbarh(aes(xmin=slope_env_lo,xmax=slope_env_hi),height=0,colour="grey55") +
-      geom_point(aes(x=slope_env,fill=conf),shape=21,size=3.2,colour="black") +
-      scale_fill_gradient(low="#fee8c8",high="#b30000",limits=c(0,1),name="confounded frac.",na.value="grey80") +
-      facet_wrap(~continent,scales="free_y") + labs(x="Standardised slope (open = clade alone → filled = environment-adjusted)", y=NULL,
-      title=sprintf("Model 2 — clade effect robustness to environmental confounding, relative %s-trunk richness",cond),
-      caption=paste("(ret x%) = share of the clade effect surviving adjustment; n/a where the unadjusted effect is below",
-                    "SLOPE_MIN and the ratio would be unstable.",
-                    sep="
-")) +
-      theme(plot.caption=element_text(hjust=0,size=7,colour="grey30")),
-    width=15, height=5.6, dpi=165)
+  # Variance partitioning: what the clade explains ON ITS OWN, what it adds ON TOP OF
+  # environment, and what the two share. Comparing clade-alone R2 with clade+environment R2
+  # does not isolate the clade -- most of the latter is environment. These fits are
+  # unconstrained (see the diagnostics block).
+  vp0 <- dia |> filter(condition==cond)
+  vp <- vp0 |>
+    tidyr::pivot_longer(c(r2_clade, unique_clade, shared),
+                        names_to="part", values_to="r2") |>
+    left_join(vp0[,c("continent","clade","unique_clade")], by=c("continent","clade")) |>
+    # factor AFTER the join -- joining against a character column drops the level order
+    mutate(continent=factor(as.character(continent),CONTS),
+           part=factor(part, c("r2_clade","unique_clade","shared"),
+             c("clade alone","unique to clade (on top of environment)","shared with environment"))) |>
+    # order clades WITHIN each panel: a plain reorder() pools across continents, which for
+    # a partition puts Americas-only clades above widespread ones with larger contributions
+    arrange(continent, unique_clade) |>
+    mutate(key=factor(paste(as.integer(continent), clade),
+                      levels=unique(paste(as.integer(continent), clade))))
+  ggsave(file.path(outdir,paste0("FIG_M2_r2_partition_",cond,".png")),
+    ggplot(vp, aes(r2, key, colour=part, shape=part)) +
+      scale_y_discrete(labels=function(x) sub("^[0-9]+ ", "", x)) +
+      geom_vline(xintercept=0, linetype=2, colour="grey40") +
+      geom_point(size=2.5, position=position_dodge(width=.55)) +
+      scale_colour_manual(values=c("clade alone"="grey45",
+        "unique to clade (on top of environment)"="#b2182b",
+        "shared with environment"="#2166ac"), name=NULL) +
+      scale_shape_manual(values=c(16,17,15), name=NULL) +
+      facet_wrap(~continent, scales="free_y") +
+      labs(x="Out-of-fold R²", y=NULL,
+      title=sprintf("Model 2 — variance partitioning of the clade signal, relative %s-trunk richness",cond),
+      caption=paste("unique = R2(clade+environment) - R2(environment alone): what the clade adds that environment cannot supply.",
+                    "shared = R2(environment) + R2(clade) - R2(clade+environment): predictive power the two hold in common.",
+                    "Clades ordered by their unique contribution. Negative values arise because R2 is out-of-fold.", sep="\n")) +
+      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+    width=14, height=6, dpi=170)
+
 }
 message("DONE -> ", outdir)

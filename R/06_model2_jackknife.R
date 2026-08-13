@@ -1,12 +1,13 @@
 # =============================================================================
-# 06_model2_jackknife.R — species-drop robustness of the Model-2 clade RANKING
+# 06_model2_jackknife.R — species-drop robustness of the Model-2 clade SLOPES
 # (companion to 06_model2.R; the Model-1 analogue is 05_model1_jackknife.R).
 #
 # Reviewer 1's concern is that the response is built from only 74 mapped species,
 # so any ordering of clades may hinge on a handful of them. Here we drop a fraction
 # of the 74 species, re-derive relative richness (S_subset / W), re-aggregate to the
 # same 1 deg unit, refit the positive-monotonic clade models per continent, and ask
-# whether the RANKING survives.
+# whether the reported slopes survive -- under BOTH settings, clade alone and clade
+# alongside the environmental covariates, so the environmental comparison is tested too.
 #
 # The analysis unit stays at 1 deg throughout: this varies the species pool, not the
 # resolution, so it does not reopen the pseudo-replication question that the
@@ -18,7 +19,7 @@
 # Writes: outputs/model2/model2_jackknife_ranks.csv (+ _summary.csv, + figure)
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr)
-  library(readr); library(ggplot2) })
+  library(readr); library(ggplot2); library(tidyr) })
 source("R/config.R")
 outdir <- paths$model2; dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
@@ -43,6 +44,16 @@ cont_of <- function(lo, la) { out <- rep("Other", length(lo))
 # in SDs of relative richness per SD of clade richness. Kept identical here so the
 # jackknife tests the statistic the paper reports rather than a different one.
 zslope <- function(yv, xv, mn, sdx){ z <- (xv-mn)/sdx; unname(coef(lm(yv ~ z))[2]) }
+Pm <- function(M) catboost.load_pool(as.matrix(M))
+# ALE of column 1, as in 06_model2.R: for the 5-feature model the clade effect is its ALE,
+# so the environment-adjusted slope is measured on the same footing as the univariate one.
+ale_at <- function(m, X, q){
+  bi <- pmin(pmax(findInterval(X[,1], q[-c(1,length(q))]),0), length(q)-2); eff <- numeric(length(q)-1)
+  for (k in seq_len(length(q)-1)){ mm <- bi==(k-1); if(!any(mm)) next
+    Xl <- X[mm,,drop=FALSE]; Xu <- X[mm,,drop=FALSE]; Xl[,1] <- q[k]; Xu[,1] <- q[k+1]
+    eff[k] <- mean(catboost.predict(m, Pm(Xu)) - catboost.predict(m, Pm(Xl))) }
+  a <- c(0, cumsum(eff)); a - mean(a) }
+MONO5 <- "(1,0,0,0,0)"
 
 # --- inputs -------------------------------------------------------------------
 ps <- load_stack(paths$predictor_stack, ENV, "predictor stack (environment layers)")
@@ -81,11 +92,10 @@ build <- function(keep) {
   g$continent <- cont_of(g$lon, g$lat); g
 }
 
-# --- slope_std for one table --------------------------------------------------
-# Only the ranking metric is recomputed per species subset. The jackknife's question is
-# whether the ORDER depends on which of the 74 species were mapped, so the spread of
-# slope_std across replicates answers it; refitting shapes and R2 as well multiplies the
-# runtime without adding to that answer.
+# --- standardised slope, both settings, for one table -------------------------
+# Only the reported slope is recomputed per species subset -- under both settings, so the
+# environmental comparison is tested as well as the raw one. Shapes and R2 are not refit:
+# the question is whether the slopes depend on which of the 74 species were mapped.
 scores_for <- function(g) {
   out <- list()
   for (cont in CONTS) {
@@ -94,12 +104,17 @@ scores_for <- function(g) {
     for (cl in CLADES) {
       x <- sub[[cl]]
       if (sum(x > 0) < 30 || length(unique(x)) < 5) next
+      q <- unique(quantile(x, seq(0, 1, length.out = 21))); mn <- mean(x); sdx <- sd(x)
       mono <- catboost.train(catboost.load_pool(matrix(x, ncol = 1), label = y), NULL,
                              params = c(cbp, list(monotone_constraints = "(1)")))
-      q <- unique(quantile(x, seq(0, 1, length.out = 21)))
+      s_uni <- zslope(catboost.predict(mono, catboost.load_pool(matrix(q, ncol = 1))),
+                      q, mn, sdx) / sdy
+      X <- as.matrix(sub[, c(cl, ENV)])
+      menv <- catboost.train(catboost.load_pool(X, label = y), NULL,
+                             params = c(cbp, list(monotone_constraints = MONO5)))
+      s_env <- zslope(ale_at(menv, X, q), q, mn, sdx) / sdy
       out[[length(out)+1]] <- data.frame(continent = cont, clade = DISP(cl),
-        slope_std = zslope(catboost.predict(mono, catboost.load_pool(matrix(q, ncol = 1))),
-                           q, mean(x), sd(x)) / sdy)
+                                         slope_uni = s_uni, slope_env = s_env)
     }
   }
   bind_rows(out)
@@ -107,7 +122,7 @@ scores_for <- function(g) {
 
 # --- full model as the reference ordering -------------------------------------
 full <- scores_for(build(seq_len(nsp))) |>
-  group_by(continent) |> mutate(rank_full = rank(-slope_std, ties.method = "min")) |> ungroup()
+  group_by(continent) |> mutate(rank_full = rank(-slope_uni, ties.method = "min")) |> ungroup()
 message("full 74-species reference ranking computed")
 
 # --- jackknife ----------------------------------------------------------------
@@ -118,7 +133,7 @@ for (fr in FRACS) {
     keep <- sort(sample(nsp, round((1 - fr)*nsp)))
     s <- scores_for(build(keep))
     if (!nrow(s)) next
-    s <- s |> group_by(continent) |> mutate(rank = rank(-slope_std, ties.method = "min")) |> ungroup()
+    s <- s |> group_by(continent) |> mutate(rank = rank(-slope_uni, ties.method = "min")) |> ungroup()
     rows[[length(rows)+1]] <- s |> mutate(frac = fr, rep = rep, n_species = length(keep))
   }
   message(sprintf("  drop %d%% done (%d reps)", as.integer(fr*100), NREP))
@@ -128,32 +143,46 @@ write_csv(jk, file.path(outdir, "model2_jackknife_ranks.csv"))
 # --- summary: how often does each clade stay in the top 3? --------------------
 summ <- jk |> group_by(continent, clade) |>
   summarise(n_fits = n(), top1_freq = mean(rank == 1), top3_freq = mean(rank <= 3),
-            median_rank = median(rank), slope_std_mean = mean(slope_std),
-            slope_std_sd = sd(slope_std), .groups = "drop") |>
-  left_join(full |> select(continent, clade, slope_std_full = slope_std, rank_full),
+            median_rank = median(rank),
+            slope_uni_mean = mean(slope_uni), slope_uni_sd = sd(slope_uni),
+            slope_env_mean = mean(slope_env), slope_env_sd = sd(slope_env),
+            .groups = "drop") |>
+  left_join(full |> select(continent, clade, slope_uni_full = slope_uni,
+                           slope_env_full = slope_env, rank_full),
             by = c("continent","clade")) |>
   arrange(continent, rank_full)
 write_csv(summ, file.path(outdir, "model2_jackknife_summary.csv"))
 print(as.data.frame(summ))
 
-# --- figure -------------------------------------------------------------------
+# --- figure: distribution of the slopes across species-drop replicates ---------
 COL <- c(Americas = "#E1812C", Africa = "#3A7CA5", Asia = "#4C9A4C")
-pd <- jk |> mutate(continent = factor(continent, CONTS))
-ord <- full |> arrange(continent, rank_full)
-pd$clade <- factor(pd$clade, levels = rev(unique(ord$clade)))
-ggsave(file.path(outdir, "FIG_M2_jackknife_rank.png"),
-  ggplot(pd, aes(rank, clade, colour = continent)) +
-    geom_jitter(width = 0.18, height = 0.18, alpha = .55, size = 1.5) +
+pd <- jk |>
+  tidyr::pivot_longer(c(slope_uni, slope_env), names_to = "setting", values_to = "slope") |>
+  mutate(continent = factor(continent, CONTS),
+         setting = factor(setting, c("slope_uni","slope_env"),
+                          c("clade alone", "clade + environment")))
+# order clades WITHIN each panel by the full-74 slope; a plain reorder() would pool the
+# continents and put Americas-only clades above widespread ones
+ord <- full |> mutate(continent = factor(continent, CONTS)) |> arrange(continent, slope_uni)
+pd$key <- factor(paste(as.integer(pd$continent), pd$clade),
+                 levels = unique(paste(as.integer(ord$continent), ord$clade)))
+ggsave(file.path(outdir, "FIG_M2_jackknife_slope.png"),
+  ggplot(pd, aes(slope, key, colour = continent, shape = setting)) +
+    geom_vline(xintercept = 0, linetype = 2, colour = "grey40") +
+    geom_point(alpha = .5, size = 1.6, position = position_jitter(height = .16, width = 0)) +
     scale_colour_manual(values = COL, guide = "none") +
-    scale_x_continuous(breaks = 1:10) +
+    scale_shape_manual(values = c("clade alone" = 16, "clade + environment" = 1), name = NULL) +
+    scale_y_discrete(labels = function(x) sub("^[0-9]+ ", "", x)) +
     facet_wrap(~continent, scales = "free_y") +
-    labs(x = "rank by the standardised slope of the constrained response", y = NULL,
-         title = "Model 2 — clade ranking under species-drop jackknife (10/20/30% of the 74 species removed)",
-         caption = "Each point is one jackknife replicate. A firm ranking gives tight columns; a spread means the order is not identifiable.") +
+    labs(x = "Standardised slope (SDs of relative richness per SD of clade richness)", y = NULL,
+         title = "Model 2 — clade slopes under species-drop jackknife (10/20/30% of the 74 species removed)",
+         caption = paste("Each point is one jackknife replicate. Filled = clade alone, open = clade + environmental covariates.",
+                         "A tight cluster means the slope does not depend on which species were mapped; a wide one means it does.",
+                         sep = "\n")) +
     theme_minimal(base_size = 10) +
-    theme(plot.title = element_text(face = "bold", size = 11),
+    theme(plot.title = element_text(face = "bold", size = 11), legend.position = "bottom",
           axis.line = element_line(colour = "grey30"), panel.grid.minor = element_blank(),
           strip.text = element_text(face = "bold"),
           plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey30")),
-  width = 14, height = 5, dpi = 170)
+  width = 14, height = 6, dpi = 170)
 message("DONE -> ", outdir)

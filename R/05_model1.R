@@ -176,12 +176,7 @@ for (rr in 1:3){ set.seed(200+rr); fo <- sample(rep_len(0:4, nrow(df)))
 ok_oof <- is.finite(oof); pooled <- r2(df[[TARGET]][ok_oof], oof[ok_oof])
 
 # Two numbers are reported: pooled_oof_r2 (every out-of-fold prediction scored once
-# against the global mean) and train_r2 (the overfitting check). The rest is archive
-# only. random_cv_r2 uses random rather than spatial folds at the same 1 deg unit --
-# the contrast that shows why a random split flatters performance, useful in a reviewer
-# response, not in the paper. spatial_cv_* is the mean of per-fold R2: the same quantity
-# as pooled but divided by each fold's own variance, so a fold covering a homogeneous
-# region scores badly even at low RMSE.
+# against the global mean) and train_r2 (the overfitting check). 
 write_csv(data.frame(pooled_oof_r2=pooled, train_r2=mean(trr),
                      random_cv_r2=mean(frand), random_cv_sd=sd(frand),
                      spatial_cv_r2=mean(fr), spatial_cv_sd=sd(fr), spatial_cv_se=sd(fr)/sqrt(length(fr)),
@@ -209,10 +204,7 @@ message(sprintf("  residual Moran I (75km) = %.2f -> CIs must come from spatial 
 # =============================================================================
 message("5. ENSEMBLE (ALE CIs)")
 set.seed(5)
-# 200 resamples, matching Model 2. At the previous 25 the 2.5th and 97.5th percentiles
-# below were effectively the ensemble minimum and maximum, which is too thin a basis for a
-# 95% interval; the descriptive analysis already uses 400-1000. Nothing downstream shifts:
-# every later section reseeds explicitly, so only ale_curves.csv and M1_ALE.png change.
+
 NB <- 200; ub <- unique(bid)
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
@@ -264,9 +256,7 @@ BLUE <- "#2c6fbb"; ok <- is.finite(oof)
 ord <- as.character(NAME[c("mammal_richness","consumption","vpi_mean","height","cold_mean","dry_mean")])
 write_csv(tibble::tibble(longitude=df$longitude, latitude=df$latitude, observed=df[[TARGET]], oof=oof, resid=resid),
           file.path(outdir,"model1_oof.csv"))
-# ALE. Two columns / three rows: portrait, so it fits a manuscript page, and each row
-# is one theme (megafauna, vegetation, seasonality). ALE is rescaled x10^-3 -- the raw
-# values are ~1e-3, which ggplot renders as "5e-04" tick labels.
+
 at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
 ggsave(file.path(outdir,"M1_ALE.png"),
   ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
@@ -291,9 +281,7 @@ pc <- ggplot(vt, aes(C, reorder(pred,C))) + geom_col(fill="#cc7777") + xlim(0,1)
 ggsave(file.path(outdir,"M1_collinearity.png"), ph + pv + pc + plot_layout(widths=c(1.35,1,1)), width=17, height=5, dpi=170)
 # diagnostics: obs-vs-pred, calibration, QQ, residual correlogram
 dobs <- tibble::tibble(o=df[[TARGET]][ok], p=oof[ok])
-# R2 here must be the POOLED out-of-fold value: this panel plots exactly those
-# predictions, so mean(fr) -- the mean of per-fold R2, each against its own fold's
-# variance -- is a different quantity and does not describe this scatter.
+
 p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_abline(linetype=2) +
   labs(x="Observed", y="Predicted (OOF)", title=sprintf("Obs vs pred (pooled OOF R²=%.3f)", pooled))
 cal <- dobs; cal$b <- cut(cal$p, quantile(cal$p, seq(0,1,.1)), include.lowest=TRUE); cal <- aggregate(cbind(o,p)~b, cal, mean)

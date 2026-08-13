@@ -1,6 +1,5 @@
 # =============================================================================
-# 05_model1_jackknife.R — species-drop jackknife (Reviewer 1: small-sample / sampling-
-# bias robustness; companion to 05_model1.R). Drop a fraction of the 74 mapped species,
+# 05_model1_jackknife.R — species-drop jackknife. Drop a fraction of the 74 mapped species,
 # re-derive relative richness (S_subset / W), aggregate to 1 deg, refit CatBoost, and
 # record whether the ALE shapes and the spatial-CV R2 stay stable.
 # Reads (paths in R/config.R): the predictor stack, the absolute + relative Tot
@@ -27,10 +26,9 @@ cbp <- list(loss_function="RMSE", depth=3, l2_leaf_reg=30, learning_rate=.05, it
 tmpl <- rast(ext(-180,180,-90,90), res=0.1, crs="EPSG:4326")
 ps <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
 Av <- values(rast(ABS))[,1]; Rv <- values(rast(REL))[,1]
-W <- ifelse(is.finite(Rv) & Rv>0, Av/Rv, NA)                 # woody richness denominator
+W <- ifelse(is.finite(Rv) & Rv>0, Av/Rv, NA)                 
 Pv <- values(ps[[PREDS]]); predfin <- rowSums(is.finite(Pv))==length(PREDS)
-# Cell -> lon/lat and the 0.1 deg -> 1 deg index, taken from the template rather than
-# assuming a 3600-column grid.
+
 n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
 col0 <- (seq_len(n)-1)%%nc; row0 <- (seq_len(n)-1)%/%nc
 lon <- ev[["xmin"]]+(col0+0.5)*rs[1]; lat <- ev[["ymax"]]-(row0+0.5)*rs[2]

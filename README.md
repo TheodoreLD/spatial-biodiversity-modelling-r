@@ -19,7 +19,7 @@ the richness layers and the richest ecoregions that the descriptive step charact
 |---|---|---|---|
 | 0 | `00_standardization.R` | standardise species names against WFO + WCVP with synonym resolution via **TNRS** (needs internet). Documentation only — the spatial pipeline matches range files by filename and does not read its output | `data/processed/` |
 | 1 | `01_biogeography.R` | rasterise ranges ÷ woody richness → absolute + relative richness (total/prickly/thorny) | `outputs/biogeography/` |
-| 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome & ecoregion distributions (block-bootstrap CIs + rank-stability), Fig-3 composite | `outputs/descriptive/` |
+| 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome & ecoregion distributions (block-bootstrap CIs), Fig-3 composite | `outputs/descriptive/` |
 | 3 | `03_mammal_ecoregions.R` | present-natural megafauna (>5 kg) of the richest ecoregion per continent | `outputs/ecoregion_mammal/` |
 | 4 | `04_data_preparation.R` | model-ready predictor stack + per-clade richness stack | `outputs/raster_model/` |
 | 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); collinearity + residual diagnostics | `outputs/model1/` |
@@ -65,10 +65,11 @@ woody-plant richness (partly controls for uneven botanical sampling).
   ÷ sd(response). Its units are **SDs of relative spiny-trunk richness per SD of clade
   richness** — standardised on both axes, which is what makes it comparable across clades
   (whose richness scales differ) and across continents (whose response scales differ). It
-  is fitted on a 21-point quantile grid, so it is weighted by where cells actually are
-  rather than by the plotted x-range. sd(response) is the full-sample value, so it is a
-  per-continent constant and ranking by the raw slope and by `slope_std` cannot disagree.
-  `slope_env` is the environment-adjusted equivalent, `retained` the surviving share.
+  is fitted at the distinct values of a 21-point quantile grid, so it is evaluated across
+  the range the data span; where a clade takes few distinct richness values these collapse
+  to fewer points, each contributing equally. sd(response) is the full-sample value, so it
+  is a per-continent constant and ranking by the raw slope and by `slope_std` cannot
+  disagree. `slope_env` is the environment-adjusted equivalent.
 - **`slope_std` is one-sided.** The monotonic model is constrained non-decreasing, so the
   slope is ≥ 0 by construction and ranks the *strength of positive association*. It is not
   a test of direction: the direction of a response is read from the unconstrained curves
@@ -80,15 +81,12 @@ woody-plant richness (partly controls for uneven botanical sampling).
 - **Variance partitioning is deliberately unconstrained.** It asks how much variance a
   clade explains uniquely versus jointly with environment; constraining the fit would
   measure the constraint as much as the data.
-- **How firm is the ranking?** Two independent checks, because the order turned out to be
-  the fragile part: `model2_rank_stability.csv` re-ranks the clades inside every spatial
-  block-bootstrap resample, and `06_model2_jackknife.R` re-ranks them after dropping
-  10/20/30% of the 74 species. Agreement between the two is the evidence that an ordering
-  is real; disagreement means it is not identifiable. The stability percentages are
-  **paired** — every clade sees the same resampled blocks, so they are re-ranked *within*
-  each resample. That matters: the clades' bootstrap draws correlate ≈ 0.46, so marginal
-  confidence intervals overlap far more than the ordering actually does, and reading the
-  ranking off the intervals alone would understate how firm it is.
+- **How firm is a slope?** Two independent perturbations. The spatial block bootstrap
+  (200 resamples) gives the confidence interval on `slope_std`, reported for both settings.
+  `06_model2_jackknife.R` then drops 10/20/30% of the 74 mapped species, re-derives
+  relative richness and refits, reporting the spread of the slope across replicates — again
+  for both settings. The first asks whether the result depends on *where* you sample, the
+  second on *which species* were mapped; the bootstrap cannot see the latter.
 - Residual short-range spatial autocorrelation persists in both models and is disclosed
   as a limitation. Adding an explicit lon/lat term *raises* CV R² (see
   `spatial_term_test.csv`) but roughly halves the permutation importance of both
