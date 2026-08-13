@@ -342,7 +342,6 @@ COL <- c(Americas="#E1812C",Africa="#3A7CA5",Asia="#4C9A4C")
 ED <- c("Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
 ORDER <- c("Artiodactyla","Perissodactyla","Rodentia","Primates","Proboscidea","Pilosa","Cingulata","Litopterna","Notoungulata","Diprotodontia")
 lab_ed <- function(c) ifelse(c %in% ED, paste0(c," (ED)"), c)
-INVCL <- setNames(CLADES, DISP(CLADES))   # display name -> column name, for the density strip
 res <- read_csv(file.path(outdir,"model2_results.csv"), show_col_types=FALSE)
 unc <- read_csv(file.path(outdir,"model2_curves.csv"), show_col_types=FALSE)
 con <- read_csv(file.path(outdir,"model2_curves_constrained.csv"), show_col_types=FALSE)
@@ -382,36 +381,16 @@ for (cond in c("total","prickly","thorny")){
   # on. Without this panel the constrained fit
   # is invisible: model2_curves_constrained.csv$y/y_lo/y_hi were written but never
   # plotted, so there was no way to judge how well the single number summarises the curve.
-  # Data density under each panel. The curves are drawn on a uniform min-max grid, so a
-  # stretch of x holding 2% of the cells gets the same width as one holding 40% -- which is
-  # what makes a ranking read as wrong against the picture. One thin band per continent.
-  dens <- list()
-  for (cl_ in unique(sc$clade)) {
-    s_ <- sc[sc$clade == cl_, ]; lo_ <- min(s_$y_lo); hi_ <- max(s_$y_hi); sp_ <- hi_ - lo_
-    for (k in seq_along(CONTS)) { ct <- CONTS[k]
-      if (!any(s_$continent == ct)) next
-      tb <- tables[[cond]]; xv <- tb[tb$continent == ct, INVCL[[cl_]]]
-      if (!length(xv) || !is.finite(sp_) || sp_ <= 0) next
-      h <- hist(xv, breaks = 24, plot = FALSE); base <- lo_ - sp_*(0.32 - 0.09*(k-1))
-      dens[[length(dens)+1]] <- data.frame(clade=cl_, continent=ct,
-        xmin=h$breaks[-length(h$breaks)], xmax=h$breaks[-1], ymin=base,
-        ymax=base + sp_*0.075*(h$counts/max(h$counts))) } }
-  dens <- bind_rows(dens); dens$lab <- factor(lab_ed(dens$clade), levels=lab_ed(cl))
   ggsave(file.path(outdir,paste0("FIG_M2_shape_constrained_",cond,".png")),
     ggplot(sc) +
-      geom_rect(data=dens, aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,fill=continent),
-                alpha=.55, inherit.aes=FALSE) +
       geom_ribbon(aes(x,ymin=y_lo,ymax=y_hi,fill=continent),alpha=.13) +
       geom_line(aes(x,y,colour=continent),linewidth=.7) +
       scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
       facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
       title=sprintf("Model 2 — monotonic-constrained clade response, relative %s-trunk richness",cond),
-      caption=paste("Bands at the foot of each panel: share of 1° cells per richness bin, one band per continent.",
-                    "The reported slope is fitted on a quantile grid, so it is weighted by that density rather than by the plotted x-range.",
-                    "The constraint is one-sided (non-decreasing): the curve cannot fall, so it shows the STRENGTH of a positive association, not its direction.",
-                    sep="\n")) +
+      caption="The constraint is one-sided (non-decreasing): the curve cannot fall, so it shows the STRENGTH of a positive association, not its direction.") +
       theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
-    width=15, height=3.4*ceiling(length(cl)/5), dpi=160)
+    width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
   # same unconstrained shape under both conditions, centred so they are comparable:
   # solid = clade alone, dashed = clade + environment (ALE, already centred)
   cmp <- bind_rows(
