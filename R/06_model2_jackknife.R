@@ -99,11 +99,11 @@ build <- function(keep) {
 scores_for <- function(g) {
   out <- list()
   for (cont in CONTS) {
-    sub <- g[g$continent == cont, ]; if (nrow(sub) < 80) next
+    sub <- g[g$continent == cont, ]; if (!nrow(sub)) next
     y <- sub$rel; sdy <- sd(y); if (!is.finite(sdy) || sdy <= 0) next
     for (cl in CLADES) {
       x <- sub[[cl]]
-      if (sum(x > 0) < 30 || length(unique(x)) < 5) next
+      if (sum(x > 0) == 0) next          # only clades absent from the continent
       q <- unique(quantile(x, seq(0, 1, length.out = 21))); mn <- mean(x); sdx <- sd(x)
       mono <- catboost.train(catboost.load_pool(matrix(x, ncol = 1), label = y), NULL,
                              params = c(cbp, list(monotone_constraints = "(1)")))

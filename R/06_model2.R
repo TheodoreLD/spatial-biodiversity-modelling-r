@@ -136,13 +136,13 @@ message("core models (constrained slope + unconstrained shape + R2)")
 rows <- list(); curves <- list(); ccur <- list(); draws <- list()
 ri <- 0; ci <- 0; cci <- 0; rsi <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
-  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (nrow(sub)<80) next
+  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (!nrow(sub)) next
     bid <- blocks(sub); ublk <- unique(bid); y <- sub$rel
     for (cl in CLADES){ x <- sub[[cl]]
-      # A clade that fits flat is a reported result, not an exclusion: it means no positive
-      # association. Diprotodontia occupies only 10% of Asian cells and fits flat;
-      # `n_present` is carried through so that sparseness stays visible beside it.
-      if (sum(x>0)<30 || length(unique(x))<5) next
+      # Only clades ABSENT from the continent are skipped. A clade that is present but fits
+      # flat is a reported result, not an exclusion -- Diprotodontia occupies 10% of Asian
+      # cells and returns a zero slope; `n_present` travels with it so sparseness is visible.
+      if (sum(x>0)==0) next
       grid <- seq(min(x), max(x), length.out=50)   # uniform, for plotting the curves
       # the slope is measured on a QUANTILE grid, so it is weighted by cell density
       qgrid <- unique(quantile(x, seq(0,1,length.out=21)))
@@ -195,11 +195,11 @@ message("environment-adjusted models (shape + R2 + slope)")
 mono5 <- "(1,0,0,0,0)"; erows <- list(); ecur <- list(); ecc <- list()
 ei <- 0; eci <- 0; ecci <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
-  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (nrow(sub)<80) next
+  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (!nrow(sub)) next
     bid <- blocks(sub); ublk <- unique(bid); y <- sub$rel
     sdy_all <- sd(y)
     for (cl in CLADES){ xc <- sub[[cl]]
-      if (sum(xc>0)<30 || length(unique(xc))<5) next   # see core loop
+      if (sum(xc>0)==0) next   # see core loop
       X <- as.matrix(sub[,c(cl,ENV)]); mn <- mean(xc); sdx <- sd(xc)
       grid <- seq(min(xc), max(xc), length.out=50)
       r2u <- c(); r2m <- c(); amat <- matrix(NA_real_,50,0)
@@ -265,9 +265,9 @@ moran <- function(sub, v, seed=3){ ok <- is.finite(v); sub <- sub[ok,]; v <- v[o
   W <- (D>0 & D<300)*1; sum(W*outer(z,z))/sum(W) }
 drows <- list(); di <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
-  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (nrow(sub)<80) next
+  for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (!nrow(sub)) next
     fo <- foldsf(sub)
-    act <- CLADES[sapply(CLADES, function(c) sum(sub[[c]]>0)>=30 && length(unique(sub[[c]]))>=5)]
+    act <- CLADES[sapply(CLADES, function(c) sum(sub[[c]]>0)>0)]
     r2e <- cvfit(sub, ENV, fo)$r2
     for (cl in act){ rc <- cvfit(sub, cl, fo); rf <- cvfit(sub, c(ENV,cl), fo)
       di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
