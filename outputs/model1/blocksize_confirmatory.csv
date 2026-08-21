@@ -1,0 +1,3 @@
+block_deg,source,range_km,n_blocks,pooled_oof_r2
+8,derived from 5 deg preliminary residuals,675,154,0.36962610829590264
+9,implied by the final model's own residuals,825,134,0.3846872782402573

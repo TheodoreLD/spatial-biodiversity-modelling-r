@@ -1,6 +1,9 @@
 # =============================================================================
 # 03_mammal_ecoregions.R
-# Present-natural large-herbivore species list per richest ecoregion / continent.
+# Present-natural large-herbivore species list for the richest ecoregion of each modelled
+# continental region. Only the Neotropic/Nearctic, Afrotropic and Indomalayan realms are
+# mapped to a region (Americas, Africa, Asia); Palearctic, Australasian, Oceanian and
+# Antarctic ecoregions are outside the study design and are dropped.
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -15,17 +18,24 @@ ranges_nat      <- paths$mammal_ranges
 ecoregions_path <- require_file(paths$ecoregions, "WWF ecoregions shapefile")
 
 # ---- 1. Large terrestrial herbivorous mammals (>5 kg, plant-eating) ----------
-traits <- read_csv(traits_path, show_col_types = FALSE) |>
+traits0 <- read_csv(traits_path, show_col_types = FALSE) |>
   filter(Mass.g > 5000, Terrestrial == 1, Diet.Plant > 0,
-         !Order.1.2 %in% c("Carnivora", "Dasyuromorphia")) |>
-  mutate(raster_path = file.path(ranges_nat, paste0(Binomial.1.2, ".tif"))) |>
-  filter(file.exists(raster_path))
+         !Order.1.2 %in% c("Carnivora", "Dasyuromorphia", "Afrosoricida")) |>
+  mutate(raster_path = file.path(ranges_nat, paste0(Binomial.1.2, ".tif")))
+
+# A partial range download would otherwise shorten every species list without a trace.
+missing <- !file.exists(traits0$raster_path)
+if (any(missing))
+  warning(sum(missing), " of ", nrow(traits0),
+          " eligible species have no natural-range raster and are dropped: ",
+          paste(head(traits0$Binomial.1.2[missing], 5), collapse = ", "),
+          if (sum(missing) > 5) ", ..." else "", call. = FALSE)
+traits <- traits0[!missing, ]
+if (nrow(traits) == 0)
+  stop("No eligible species have range rasters under ", ranges_nat, call. = FALSE)
+message(nrow(traits), " large herbivores with ranges")
 
 # ---- 2. Target ecoregions (richest relative spiny-trunk richness per continent)
-# Derived from the ranking that 02_descriptive.R writes, not hardcoded, so rerunning
-# the descriptive step with different data updates this one automatically. Continents
-# come from the Ecoregions2017 REALM field; Palearctic / Australasia / Oceania are not
-# analysed, matching the three continents modelled in 06_model2.R.
 eco <- st_read(ecoregions_path, quiet = TRUE) |> st_make_valid()
 if (!"REALM" %in% names(eco)) stop("Ecoregions shapefile has no REALM field", call. = FALSE)
 
@@ -45,6 +55,9 @@ target_ecos <- read_csv(ranking_path, show_col_types = FALSE) |>
   mutate(continent = realm_to_continent(REALM)) |>
   filter(!is.na(continent)) |>
   group_by(continent) |>
+  # Picked on the point estimate alone. The ranking file already applies the >=10-cell
+  # floor, but the bootstrap interval in the same file is not consulted: where the top two
+  # ecoregions overlap, this choice is not resolved by the data.
   slice_max(mean, n = 1, with_ties = FALSE) |>
   ungroup() |>
   arrange(desc(mean))
@@ -55,30 +68,38 @@ if (nrow(target_ecos) == 0)
 
 message("target ecoregions: ",
         paste(sprintf("%s (%s)", target_ecos$ECO_NAME, target_ecos$continent), collapse = " | "))
-selected_ecos <- eco |> filter(ECO_NAME %in% target_ecos$ECO_NAME)
+
+selected_ecos <- eco |>
+  filter(ECO_ID %in% target_ecos$ECO_ID) |>
+  left_join(target_ecos |> dplyr::select(ECO_ID, continent), by = "ECO_ID")
 
 # ---- 3. Reproject to match species rasters -----------------------------------
-ref_rast      <- rast(traits$raster_path[1])
-selected_ecos <- st_transform(selected_ecos, crs = crs(ref_rast))
+ref_rast <- rast(traits$raster_path[1])
+crs_ref  <- crs(ref_rast)
+odd <- traits$raster_path[!vapply(traits$raster_path,
+                                  function(p) identical(crs(rast(p)), crs_ref), logical(1))]
+if (length(odd))
+  stop(length(odd), " range rasters do not share the CRS of ",
+       basename(traits$raster_path[1]), ", e.g. ", basename(odd[1]), call. = FALSE)
+selected_ecos <- st_transform(selected_ecos, crs = crs_ref)
 
 # ---- 4. Presence test --------------------------------------------------------
 present_in_poly <- function(r_path, poly_sf) {
-  r_vals <- terra::extract(rast(r_path), vect(poly_sf))[[2]]
-  any(r_vals == 1, na.rm = TRUE)
+  vals <- terra::extract(rast(r_path), vect(poly_sf), ID = FALSE)[[1]]
+  any(vals == 1, na.rm = TRUE)
 }
 
 # ---- 5. Species list per ecoregion -------------------------------------------
-ecoregion_species <- selected_ecos |>
-  dplyr::select(ECO_NAME, geometry) |>
-  mutate(species = map(geometry, ~ {
-    flags <- map_lgl(traits$raster_path, present_in_poly, poly_sf = .x)
-    traits$Binomial.1.2[flags]
-  })) |>
-  st_set_geometry(NULL)
+ecoregion_species <- map_dfr(seq_len(nrow(selected_ecos)), function(i) {
+  poly  <- selected_ecos[i, ]
+  flags <- map_lgl(traits$raster_path, present_in_poly, poly_sf = poly)
+  tibble(ECO_ID = poly$ECO_ID, Ecoregion = poly$ECO_NAME, Continent = poly$continent,
+         species = list(traits$Binomial.1.2[flags]))
+})
 
 ecoregion_unnested <- ecoregion_species |>
   unnest(cols = species) |>
-  rename(Ecoregion = ECO_NAME, Species = species)
+  rename(Species = species)
 
 write_csv(ecoregion_unnested, file.path(paths$ecoregion_mammal, "ecoregion_mammals.csv"))
 

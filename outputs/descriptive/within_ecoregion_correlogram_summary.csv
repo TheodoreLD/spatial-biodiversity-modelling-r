@@ -1,0 +1,14 @@
+metric,spiny,prickly,thorny
+Spatial correlation at 25 km,0.5403,0.534,0.5634
+Spatial correlation at 75 km,0.2619,0.2582,0.2659
+Spatial correlation at 125 km,0.1098,0.1012,0.0961
+Spatial correlation at 175 km,0.0147,0.0038,-0.0015
+Spatial correlation at 225 km,-0.0318,-0.0371,-0.0592
+Spatial correlation at 275 km,-0.0826,-0.0744,-0.1067
+Spatial correlation at 325 km,-0.1207,-0.1134,-0.1257
+Spatial correlation at 375 km,-0.1428,-0.1454,-0.1274
+Spatial correlation at 425 km,-0.1606,-0.1601,-0.1373
+Spatial correlation at 475 km,-0.1828,-0.1874,-0.1678
+Range (km),175,175,125
+Ecoregions,276,240,235
+Ecoregions contributing (min over rows above),250,214,211

@@ -49,10 +49,6 @@ require_file <- function(path, description = 'required file') {
   path
 }
 
-# Read a raster stack and return its layers in `expected` order.
-# Prefers the layer names stored in the file; falls back to positional assignment only
-# when the layer count matches, and says so. Assigning names positionally without this
-# check silently mislabels every predictor if the band order ever changes.
 load_stack <- function(path, expected, description = 'raster stack') {
   r <- terra::rast(require_file(path, description))
   if (!all(expected %in% names(r))) {

@@ -250,8 +250,22 @@ write_csv(env, file.path(outdir,"model2_env_results.csv"))
 # restricts the fit, so partitioning a constrained R2 would measure the constraint as much
 # as the data.
 message("diagnostics (variance partitioning)")
+# Averaged over NSEED fold assignments. One assignment is not enough: with 44-65 blocks
+# per continent the raw r2_clade of a weak predictor moves by up to 0.21 between seeds
+# (Americas thorny Notoungulata: -0.178 to +0.031), larger than the quantity itself.
+# The components are computed PER SEED and then averaged, so each is a paired difference
+# within its own fold assignment and the fold noise largely cancels -- `unique` varies by
+# ~0.03 across seeds where the raw r2_clade varies by 0.21. The *_sd columns carry that
+# spread so a reader can see which parts are resolvable.
+# The identity holds on the means as well as per seed:
+#   unique_env + shared + unique_clade = r2_full.
+NSEED <- 10
+# balanced fold assignment, identical to 05_model1.R: shuffle the blocks, deal round-robin,
+# so each fold holds the same number of blocks +/-1. Matters more here than in Model 1
+# because the per-continent subsets have far fewer blocks (44-65) than the global 199.
 foldsf <- function(sub, deg=7, k=5, seed=1){ b <- blocks(sub, deg); set.seed(seed)
-  u <- unique(b); f <- setNames(sample(0:(k-1), length(u), TRUE), as.character(u)); as.integer(f[as.character(b)]) }
+  u <- sample(unique(b)); f <- setNames(rep(0:(k-1), length.out=length(u)), as.character(u))
+  as.integer(f[as.character(b)]) }
 cvfit <- function(sub, feats, fo){ X <- as.matrix(sub[,feats,drop=FALSE]); y <- sub$rel; oof <- rep(NA_real_, nrow(sub))
   for (f in unique(fo)){ tr <- fo!=f; te <- fo==f; if (sum(te)<10) next
     m <- catboost.train(catboost.load_pool(X[tr,,drop=FALSE], label=y[tr]), NULL, params=cbp)
@@ -260,13 +274,25 @@ cvfit <- function(sub, feats, fo){ X <- as.matrix(sub[,feats,drop=FALSE]); y <- 
 drows <- list(); di <- 0
 for (cond in names(tables)){ tab <- tables[[cond]]
   for (cont in CONTS){ sub <- tab[tab$continent==cont,]; if (!nrow(sub)) next
-    fo <- foldsf(sub)
     act <- CLADES[sapply(CLADES, function(c) sum(sub[[c]]>0)>0)]
-    r2e <- cvfit(sub, ENV, fo)
-    for (cl in act){ rc <- cvfit(sub, cl, fo); rf <- cvfit(sub, c(ENV,cl), fo)
-      di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=DISP(cl),
-        r2_env=r2e, r2_clade=rc, r2_full=rf, unique_clade=rf-r2e, shared=r2e+rc-rf) }
-    message(sprintf("  %s/%s: %d clades", cond, cont, length(act))) } }
+    RE <- numeric(NSEED)
+    RC <- matrix(NA_real_, NSEED, length(act)); RF <- matrix(NA_real_, NSEED, length(act))
+    for (sd_i in seq_len(NSEED)){ fo <- foldsf(sub, seed=sd_i)
+      RE[sd_i] <- cvfit(sub, ENV, fo)
+      for (j in seq_along(act)){ RC[sd_i,j] <- cvfit(sub, act[j], fo)
+                                 RF[sd_i,j] <- cvfit(sub, c(ENV,act[j]), fo) } }
+    for (j in seq_along(act)){
+      uq <- RF[,j] - RE            # what the clade adds on top of environment
+      ue <- RF[,j] - RC[,j]        # what environment adds on top of the clade
+      sh <- RE + RC[,j] - RF[,j]   # what either could have supplied (the confounded part)
+      di <- di+1; drows[[di]] <- data.frame(condition=cond, continent=cont, clade=DISP(act[j]),
+        r2_env=mean(RE),       r2_env_sd=sd(RE),
+        r2_clade=mean(RC[,j]), r2_clade_sd=sd(RC[,j]),
+        r2_full=mean(RF[,j]),  r2_full_sd=sd(RF[,j]),
+        unique_env=mean(ue),   unique_env_sd=sd(ue),
+        shared=mean(sh),       shared_sd=sd(sh),
+        unique_clade=mean(uq), unique_clade_sd=sd(uq), n_seed=NSEED) }
+    message(sprintf("  %s/%s: %d clades x %d fold seeds", cond, cont, length(act), NSEED)) } }
 write_csv(bind_rows(drows), file.path(outdir,"model2_diagnostics.csv"))
 
 # =============================================================================
@@ -285,31 +311,49 @@ lab_ed <- function(c) ifelse(c %in% ED, paste0(c," (ED)"), c)
 res <- read_csv(file.path(outdir,"model2_results.csv"), show_col_types=FALSE)
 unc <- read_csv(file.path(outdir,"model2_curves.csv"), show_col_types=FALSE)
 con <- read_csv(file.path(outdir,"model2_curves_constrained.csv"), show_col_types=FALSE)
-env <- read_csv(file.path(outdir,"model2_env_results.csv"), show_col_types=FALSE)
 cenv <- read_csv(file.path(outdir,"model2_curves_env.csv"), show_col_types=FALSE)
 cenvc <- read_csv(file.path(outdir,"model2_curves_env_constrained.csv"), show_col_types=FALSE)
 dia <- read_csv(file.path(outdir,"model2_diagnostics.csv"), show_col_types=FALSE)
+env <- read_csv(file.path(outdir,"model2_env_results.csv"), show_col_types=FALSE)
 for (cond in c("total","prickly","thorny")){
-  # the ranking, both settings on one row per clade: filled = clade alone, open = clade
-  # plus the four environmental covariates, each with its block-bootstrap interval
-  d <- res |> filter(condition==cond) |>
-    left_join(env |> filter(condition==cond) |>
-                select(continent, clade, slope_env, slope_env_lo, slope_env_hi),
-              by=c("continent","clade")) |>
-    mutate(continent=factor(as.character(continent),CONTS), s=slope_std, lab=lab_ed(clade))
+  # ---- ranking, both settings, all three conditions --------------------------
+  # The species-drop replicates exist only for `total` (06_model2_jackknife.R does not
+  # jackknife the subsets, because removing species from prickly/thorny changes what the
+  # subset means), so this figure carries what IS defined for every condition: the slope
+  # under both settings with its block-bootstrap interval, plus the share of explained
+  # variance that cannot be attributed to either predictor. FIG_M2_jackknife_slope adds
+  # the species-drop points on top of this, for `total` only.
+  STG <- c("clade alone", "clade + environment")
+  ee  <- env |> filter(condition==cond) |> mutate(continent=factor(as.character(continent),CONTS))
+  ord <- ee |> arrange(continent, slope_uni)
+  LEV <- unique(paste(as.integer(ord$continent), ord$clade))
+  mk  <- function(ct, cl) factor(paste(as.integer(ct), cl), levels=LEV)
+  rk <- bind_rows(
+    ee |> transmute(continent, clade, setting=STG[1], slope=slope_uni,
+                    lo=slope_uni_lo, hi=slope_uni_hi),
+    ee |> transmute(continent, clade, setting=STG[2], slope=slope_env,
+                    lo=slope_env_lo, hi=slope_env_hi)) |>
+    mutate(setting=factor(setting, STG), key=mk(continent, clade))
+  cf <- dia |> filter(condition==cond) |>
+    mutate(continent=factor(as.character(continent),CONTS),
+           txt=ifelse(shared>0 & shared>2*shared_sd,
+                      sprintf("%.0f%%", 100*shared/r2_full), "0%"),
+           setting=factor(STG[2], STG), key=mk(continent, clade))
+  xr <- max(rk$hi, na.rm=TRUE) * 1.14
   ggsave(file.path(outdir,paste0("FIG_M2_rank_",cond,".png")),
-    ggplot(d, aes(y=reorder(lab,s))) + geom_vline(xintercept=0,linetype=2,colour="grey40") +
-      geom_errorbarh(aes(xmin=slope_std_lo,xmax=slope_std_hi),height=0,colour="grey60") +
-      geom_errorbarh(aes(xmin=slope_env_lo,xmax=slope_env_hi),height=0,colour="grey80") +
-      geom_point(aes(x=s,colour=continent),size=2.6) +
-      geom_point(aes(x=slope_env,colour=continent),shape=21,fill="white",size=2.6,stroke=.9) +
-      scale_colour_manual(values=COL,guide="none") + facet_wrap(~continent, scales="free_y") +
+    ggplot(rk, aes(slope, key, colour=continent)) +
+      geom_vline(xintercept=0, linetype=2, colour="grey40") +
+      geom_errorbarh(aes(xmin=lo, xmax=hi), height=0, linewidth=.5, alpha=.85) +
+      geom_point(size=2.4) +
+      geom_text(data=cf, aes(x=xr, y=key, label=txt), inherit.aes=FALSE,
+                hjust=1, size=2.6, colour="grey25") +
+      expand_limits(x=xr) +
+      scale_colour_manual(values=COL, guide="none") +
+      scale_y_discrete(labels=function(x) sub("^[0-9]+ ", "", x)) +
+      facet_grid(continent ~ setting, scales="free_y", space="free_y") +
       labs(x="Standardised slope (SDs of relative richness per SD of clade richness)", y=NULL,
-      title=sprintf("Model 2 — mammal-clade association with relative %s-trunk richness (ED = endemic)",cond),
-      caption=paste("Filled = clade alone; open = clade + environmental covariates. Bars: 95% spatial block-bootstrap CI.",
-                    "The slope is >= 0 by construction, so it ranks strength and not direction; read the shape from FIG_M2_shape_unconstrained_*.", sep="\n")) +
-      theme(plot.caption=element_text(hjust=0, size=7.5, colour="grey30")),
-    width=14, height=6, dpi=170)
+      title=sprintf("Model 2 — clade ranking with and without environmental covariates, relative %s-trunk richness",cond)),
+    width=13, height=7, dpi=170)
   su <- unc |> filter(condition==cond); sc <- con |> filter(condition==cond)
   cl <- intersect(ORDER, unique(su$clade))
   su$lab <- factor(lab_ed(su$clade), levels=lab_ed(cl)); sc$lab <- factor(lab_ed(sc$clade), levels=lab_ed(cl))
@@ -319,8 +363,8 @@ for (cond in c("total","prickly","thorny")){
       scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
       facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
       title=sprintf("Model 2 — UNCONSTRAINED clade response, relative %s-trunk richness",cond),
-      caption="No monotonicity is imposed here, so these curves can fall: this is the only place in Model 2 where a negative association can appear.") +
-      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+      ) +
+      theme(legend.position="bottom"),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
   # The constrained (non-decreasing) curve that the ranking metric is actually measured
   # on. Without this panel the constrained fit
@@ -333,8 +377,8 @@ for (cond in c("total","prickly","thorny")){
       scale_colour_manual(values=COL,name=NULL) + scale_fill_manual(values=COL,guide="none") +
       facet_wrap(~lab, scales="free", ncol=5) + labs(x="clade richness", y="pred. rel. richness",
       title=sprintf("Model 2 — monotonic-constrained clade response, relative %s-trunk richness",cond),
-      caption="The constraint is one-sided (non-decreasing): the curve cannot fall, so it shows the STRENGTH of a positive association, not its direction.") +
-      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+      ) +
+      theme(legend.position="bottom"),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
   # same unconstrained shape under both conditions, centred so they are comparable:
   # solid = clade alone, dashed = clade + environment (ALE, already centred)
@@ -370,44 +414,55 @@ for (cond in c("total","prickly","thorny")){
       facet_wrap(~lab, scales="free", ncol=5) +
       labs(x="clade richness", y="centred response",
       title=sprintf("Model 2 — CONSTRAINED clade response with and without environmental covariates, relative %s-trunk richness",cond),
-      caption="Both curves are non-decreasing by construction; the reported slope is the standardised linear trend through each.") +
-      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
+      ) +
+      theme(legend.position="bottom"),
     width=15, height=3.1*ceiling(length(cl)/5), dpi=160)
   # Variance partitioning: what the clade explains ON ITS OWN, what it adds ON TOP OF
   # environment, and what the two share. Comparing clade-alone R2 with clade+environment R2
   # does not isolate the clade -- most of the latter is environment. These fits are
   # unconstrained (see the diagnostics block).
   vp0 <- dia |> filter(condition==cond)
+  # Three-way partition: what only environment supplies, what only the clade supplies, and
+  # what either could have (the confounded part). They sum exactly to r2_full.
+  # Drawn as three bars from zero rather than a stack: `shared` is NEGATIVE in 36 of 60
+  # cells (suppression -- the two together beat the sum of their parts) and exceeds twice
+  # its own seed-spread in only 31, so stacking it would give the least resolvable
+  # component the most visual weight and send negative segments to the wrong side of zero.
+  # Error bars are +/-1 SD across the NSEED fold assignments: a bar shorter than its own
+  # error bar is not resolvable, which is the honest reading for much of `shared`.
+  PARTS <- c("environment only","confounded (either could supply)","clade only")
   vp <- vp0 |>
-    tidyr::pivot_longer(c(r2_clade, unique_clade, shared),
-                        names_to="part", values_to="r2") |>
-    left_join(vp0[,c("continent","clade","unique_clade")], by=c("continent","clade")) |>
-    # factor AFTER the join -- joining against a character column drops the level order
-    mutate(continent=factor(as.character(continent),CONTS),
-           part=factor(part, c("r2_clade","unique_clade","shared"),
-             c("clade alone","unique to clade (on top of environment)","shared with environment"))) |>
+    mutate(continent=factor(as.character(continent),CONTS)) |>
     # order clades WITHIN each panel: a plain reorder() pools across continents, which for
     # a partition puts Americas-only clades above widespread ones with larger contributions
     arrange(continent, unique_clade) |>
     mutate(key=factor(paste(as.integer(continent), clade),
                       levels=unique(paste(as.integer(continent), clade))))
+  pl <- bind_rows(
+    vp |> transmute(continent, key, part=PARTS[1], v=unique_env,   sd=unique_env_sd),
+    vp |> transmute(continent, key, part=PARTS[2], v=shared,       sd=shared_sd),
+    vp |> transmute(continent, key, part=PARTS[3], v=unique_clade, sd=unique_clade_sd)) |>
+    mutate(part=factor(part, PARTS))
+  # The confounded share as a percentage is NOT annotated here -- this figure already
+  # shows `shared` directly as a bar with its own error bar, so a percentage would repeat
+  # it. The percentage is carried on the ranking figure (FIG_M2_jackknife_slope), where
+  # `shared` is otherwise invisible.
+  dg <- position_dodge(width=.72)
   ggsave(file.path(outdir,paste0("FIG_M2_r2_partition_",cond,".png")),
-    ggplot(vp, aes(r2, key, colour=part, shape=part)) +
+    ggplot(pl, aes(v, key, fill=part)) +
+      geom_vline(xintercept=0, colour="grey45", linewidth=.4) +
+      geom_col(width=.68, position=dg) +
+      geom_errorbarh(aes(xmin=v-sd, xmax=v+sd), height=0, linewidth=.4,
+                     colour="grey25", position=dg) +
+      geom_point(data=vp, aes(x=r2_full, y=key), inherit.aes=FALSE,
+                 shape=23, size=2.1, fill="white", colour="grey15", stroke=.6) +
+      scale_fill_manual(values=setNames(c("#c6d3dc","#e0b23c","#b2182b"), PARTS), name=NULL) +
       scale_y_discrete(labels=function(x) sub("^[0-9]+ ", "", x)) +
-      geom_vline(xintercept=0, linetype=2, colour="grey40") +
-      geom_point(size=2.5, position=position_dodge(width=.55)) +
-      scale_colour_manual(values=c("clade alone"="grey45",
-        "unique to clade (on top of environment)"="#b2182b",
-        "shared with environment"="#2166ac"), name=NULL) +
-      scale_shape_manual(values=c(16,17,15), name=NULL) +
       facet_wrap(~continent, scales="free_y") +
       labs(x="Out-of-fold R²", y=NULL,
-      title=sprintf("Model 2 — variance partitioning of the clade signal, relative %s-trunk richness",cond),
-      caption=paste("unique = R2(clade+environment) - R2(environment alone): what the clade adds that environment cannot supply.",
-                    "shared = R2(environment) + R2(clade) - R2(clade+environment): predictive power the two hold in common.",
-                    "Clades ordered by their unique contribution. Negative values arise because R2 is out-of-fold.", sep="\n")) +
-      theme(legend.position="bottom", plot.caption=element_text(hjust=0,size=7,colour="grey30")),
-    width=14, height=6, dpi=170)
+      title=sprintf("Model 2 — how the explained variance splits between clade and environment, relative %s-trunk richness",cond)) +
+      theme(legend.position="bottom"),
+    width=14, height=6.5, dpi=170)
 
 }
 message("DONE -> ", outdir)

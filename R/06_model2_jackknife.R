@@ -28,7 +28,8 @@ CLADES <- c("Pilosa","Cetartiodactyla","Diprotodontia","Primates","Rodentia",
 DISP <- function(x) ifelse(x == "Cetartiodactyla", "Artiodactyla", x)
 ENV   <- c("vpi_mean","cold_mean","dry_mean","height")
 CONTS <- c("Americas","Africa","Asia")
-FRACS <- c(0.1, 0.2, 0.3); NREP <- 10
+FRACS <- c(0.1, 0.2, 0.3); NREP <- 30   # 30 per fraction: 10 was too few to read as a
+                                        # distribution, and the whole run is ~85 min
 cbp <- list(loss_function="RMSE", depth=4, l2_leaf_reg=10, learning_rate=0.05,
             iterations=300, allow_writing_files=FALSE, logging_level="Silent")
 
@@ -158,35 +159,78 @@ summ <- jk |> group_by(continent, clade) |>
 write_csv(summ, file.path(outdir, "model2_jackknife_summary.csv"))
 print(as.data.frame(summ))
 
-# --- figure: distribution of the slopes across species-drop replicates ---------
+# --- figure: full-species reference vs species-drop replicates ----------------
+# Two columns per continent sharing ONE y-ordering (the full-data slope). That shared
+# order is the whole point: a ranking that survives species dropping reads as a clean
+# descending staircase on the right, and where it breaks the replicate medians visibly
+# step out of line. Sorting each column on its own values would hide exactly that.
+# The columns perturb different things -- spatial resampling of a fixed species pool on
+# the left, resampling of the pool itself on the right -- so they are complementary
+# rather than two views of the same uncertainty.
+# Two columns = the two settings, under the 30% drop only. The three fractions are all
+# computed and all written to model2_jackknife_ranks.csv, but only the most severe one is
+# drawn: pooling 10/20/30% into a single cloud would make a mixture distribution whose
+# width is driven by the 30% draws and which answers no single question, while three
+# dodged intervals per row cost more ink than the reading is worth. 30% with NREP=30 is
+# one interpretable question -- if a third of the mapped pool were missing, where would
+# the slope be? -- with enough replicates to read as a distribution.
+# Confounding between clade and environment is NOT shown here: it is a property of the
+# predictors rather than of this resampling, and is reported in FIG_M2_r2_partition_*.
 COL <- c(Americas = "#E1812C", Africa = "#3A7CA5", Asia = "#4C9A4C")
-pd <- jk |>
+STG <- c("clade alone", "clade + environment")
+KEYS <- c("one species-drop replicate", "median of the 30 replicates", "full 74-species estimate")
+ev <- read_csv(file.path(outdir, "model2_env_results.csv"), show_col_types = FALSE) |>
+  filter(condition == "total") |> mutate(continent = factor(continent, CONTS))
+ord  <- ev |> arrange(continent, slope_uni)
+LEV  <- unique(paste(as.integer(ord$continent), ord$clade))
+mkey <- function(cont, clade) factor(paste(as.integer(cont), clade), levels = LEV)
+ref <- bind_rows(
+  ev |> transmute(continent, clade, setting = STG[1], slope = slope_uni),
+  ev |> transmute(continent, clade, setting = STG[2], slope = slope_env)) |>
+  mutate(setting = factor(setting, STG), key = mkey(continent, clade))
+rep30 <- jk |> filter(frac == 0.3) |> mutate(continent = factor(continent, CONTS)) |>
   tidyr::pivot_longer(c(slope_uni, slope_env), names_to = "setting", values_to = "slope") |>
+  mutate(setting = factor(ifelse(setting == "slope_uni", STG[1], STG[2]), STG),
+         key = mkey(continent, clade))
+med <- rep30 |> group_by(continent, key, setting) |>
+  summarise(slope = median(slope), .groups = "drop")
+# The share of explained variance that CANNOT be attributed to clade or environment
+# individually: shared / r2_full from the variance partition (model2_diagnostics.csv).
+# This deliberately does NOT track the gap between the two diamonds on each row. The gap
+# is a change in the slope ESTIMATE; this is a split of explained VARIANCE, from the
+# unconstrained fits under 10-seed CV rather than the constrained bootstrap that produced
+# the slopes. The two answer different questions and can disagree: Americas Pilosa reads
+# 0% here while its slope halves between columns, because none of its explained variance
+# is inseparable even though its estimate moves a lot. The caption says so.
+# 0% covers both "the overlap is within the fold-seed spread" and "the overlap is
+# negative", i.e. the two predictors are complementary, so nothing is unattributable.
+cf <- read_csv(file.path(outdir, "model2_diagnostics.csv"), show_col_types = FALSE) |>
+  filter(condition == "total") |>
   mutate(continent = factor(continent, CONTS),
-         setting = factor(setting, c("slope_uni","slope_env"),
-                          c("clade alone", "clade + environment")))
-# order clades WITHIN each panel by the full-74 slope; a plain reorder() would pool the
-# continents and put Americas-only clades above widespread ones
-ord <- full |> mutate(continent = factor(continent, CONTS)) |> arrange(continent, slope_uni)
-pd$key <- factor(paste(as.integer(pd$continent), pd$clade),
-                 levels = unique(paste(as.integer(ord$continent), ord$clade)))
+         txt = ifelse(shared > 0 & shared > 2*shared_sd,
+                      sprintf("%.0f%%", 100*shared/r2_full), "0%"),
+         setting = factor(STG[2], STG), key = mkey(continent, clade))
+xcf <- max(c(ref$slope, rep30$slope), na.rm = TRUE) * 1.16
 ggsave(file.path(outdir, "FIG_M2_jackknife_slope.png"),
-  ggplot(pd, aes(slope, key, colour = continent, shape = setting)) +
+  ggplot(mapping = aes(y = key, colour = continent)) +
     geom_vline(xintercept = 0, linetype = 2, colour = "grey40") +
-    geom_point(alpha = .5, size = 1.6, position = position_jitter(height = .16, width = 0)) +
+    geom_point(data = rep30, aes(x = slope, shape = KEYS[1]), alpha = .40, size = 1.5,
+               position = position_jitter(height = .16, width = 0)) +
+    geom_point(data = med, aes(x = slope, shape = KEYS[2]), size = 4.2, stroke = 1.1) +
+    geom_point(data = ref, aes(x = slope, shape = KEYS[3]), size = 2.7, fill = "white", stroke = .8) +
+    geom_text(data = cf, aes(x = xcf, y = key, label = txt), hjust = 1, size = 2.6,
+              colour = "grey25", show.legend = FALSE, inherit.aes = FALSE) +
+    expand_limits(x = xcf) +
+    scale_shape_manual(values = setNames(c(16, 124, 23), KEYS), breaks = KEYS, name = NULL) +
     scale_colour_manual(values = COL, guide = "none") +
-    scale_shape_manual(values = c("clade alone" = 16, "clade + environment" = 1), name = NULL) +
     scale_y_discrete(labels = function(x) sub("^[0-9]+ ", "", x)) +
-    facet_wrap(~continent, scales = "free_y") +
+    guides(shape = guide_legend(override.aes = list(alpha = 1, size = c(1.9, 4.2, 2.7)))) +
+    facet_grid(continent ~ setting, scales = "free_y", space = "free_y") +
     labs(x = "Standardised slope (SDs of relative richness per SD of clade richness)", y = NULL,
-         title = "Model 2 — clade slopes under species-drop jackknife (10/20/30% of the 74 species removed)",
-         caption = paste("Each point is one jackknife replicate. Filled = clade alone, open = clade + environmental covariates.",
-                         "A tight cluster means the slope does not depend on which species were mapped; a wide one means it does.",
-                         sep = "\n")) +
+         title = "Model 2 - clade slopes after dropping 30% of the mapped species, with and without environmental covariates") +
     theme_minimal(base_size = 10) +
     theme(plot.title = element_text(face = "bold", size = 11), legend.position = "bottom",
           axis.line = element_line(colour = "grey30"), panel.grid.minor = element_blank(),
-          strip.text = element_text(face = "bold"),
-          plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey30")),
-  width = 14, height = 6, dpi = 170)
+          strip.text = element_text(face = "bold")),
+  width = 13, height = 7.5, dpi = 170)
 message("DONE -> ", outdir)

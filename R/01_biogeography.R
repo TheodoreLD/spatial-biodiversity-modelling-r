@@ -35,7 +35,7 @@ for (nm in names(subsets)) {
   nat_aligned <- resample(nat_rast, richness, method = "bilinear")
   richness[richness == 0] <- NA
   prop_rich <- richness / nat_aligned
-  prop_rich[is.nan(prop_rich)] <- NA; prop_rich[prop_rich == 0] <- NA
+  prop_rich[!is.finite(prop_rich) | prop_rich <= 0] <- NA
   writeRaster(prop_rich, file.path(paths$biogeo_rasters, sprintf("Relative_Richness_%s.tif", nm)), overwrite = TRUE)
 }
 message("01_biogeography.R completed (richness rasters -> ", paths$biogeo_rasters, ")")

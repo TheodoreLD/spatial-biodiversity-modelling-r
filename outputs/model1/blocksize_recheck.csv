@@ -1,0 +1,3 @@
+source,depth,l2_leaf_reg,n_allocations,range_km_mean_correlogram,block_deg,range_km_per_allocation
+"preliminary (depth 6, l2 3)",6,3,5,675,8,525; 675; 675; 675; 675
+tuned,3,30,5,675,8,675; 675; 675; 675; 675

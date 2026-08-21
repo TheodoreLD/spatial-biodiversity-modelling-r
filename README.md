@@ -19,19 +19,18 @@ the richness layers and the richest ecoregions that the descriptive step charact
 |---|---|---|---|
 | 0 | `00_standardization.R` | standardise species names against WFO + WCVP with synonym resolution via **TNRS** (needs internet). Documentation only — the spatial pipeline matches range files by filename and does not read its output | `data/processed/` |
 | 1 | `01_biogeography.R` | rasterise ranges ÷ woody richness → absolute + relative richness (total/prickly/thorny) | `outputs/biogeography/` |
-| 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome & ecoregion distributions (block-bootstrap CIs), Fig-3 composite | `outputs/descriptive/` |
+| 2 | `02_descriptive.R` | richness maps (country borders, no axes), biome distributions (area-weighted IQR) and ecoregion means (block-bootstrap CIs), Fig-3 composite | `outputs/descriptive/` |
 | 3 | `03_mammal_ecoregions.R` | present-natural megafauna (>5 kg) of the richest ecoregion per continent | `outputs/ecoregion_mammal/` |
 | 4 | `04_data_preparation.R` | model-ready predictor stack + per-clade richness stack | `outputs/raster_model/` |
-| 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking); collinearity + residual diagnostics | `outputs/model1/` |
+| 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE** (no importance ranking), plus its design justifications (resolution, transform) and species-drop robustness, all in one file; sections selectable with `M1_RUN` | `outputs/model1/` |
 | 6 | `06_model2.R` | **Model 2** — mammal-clade associations, each clade fitted **with and without** the environmental covariates: unconstrained shape (direction) + OOB R², constrained shape + `slope_std` ranking + OOB R², plus unconstrained variance-partitioning diagnostics | `outputs/model2/` |
 
 Each model has companion scripts (reviewer responses / methods justification):
 
 | script | question it answers |
 |---|---|
-| `05_model1_sensitivity.R` | why 1°, why no transform, why no spatial term |
-| `05_model1_jackknife.R` | are the ALE shapes and CV-R² stable when 30% of the 74 species are dropped? |
-| `06_model2_jackknife.R` | do the **ranking, response shapes and R²** survive dropping 10/20/30% of the species? |
+| `06_model2_jackknife.R` | does the **slope ranking** survive dropping 10/20/30% of the species (30 replicates each, both settings)? Shapes and R² are not refit |
+| `06_model2_paper_figure.R` | assembles the combined manuscript figure (jackknife + unconstrained shapes); fits nothing, runs in seconds |
 
 `R/config.R` holds `here()`-based paths; `R/requirements.R` lists packages;
 `ENVIRONMENT.md` records the versions the pipeline was verified with — read its `terra`
@@ -44,16 +43,33 @@ Afro-Asian-centred). The response is **relative richness** = spiny-trunk species
 woody-plant richness (partly controls for uneven botanical sampling).
 
 ## Method notes
-- **1° analysis unit** (aggregated from 0.1°): defensible *n* (4,858 cells) instead of
-  ~404k pseudo-replicates from 74 species ranges.
+- **1° analysis unit** (aggregated from 0.1°): defensible *n* (4,806 cells) instead of
+  ~399k pseudo-replicates from 74 species ranges. That is the reason for the choice; the
+  resolution sweep is a check, not the justification — it cannot separate 1° (0.363 ± 0.021)
+  from 2° (0.368 ± 0.013), and only rules out 0.1° (0.285 ± 0.021) firmly.
+- **Tuning does not discriminate.** All 12 configurations fall within one standard error of
+  the minimum in every fold allocation, so the 1-SE rule returns the simplest corner of the
+  grid by construction rather than by selection. Hyperparameters are also chosen on the same
+  cells that produce the reported R² (no nested CV); with a grid this flat the leak is small,
+  but the estimate is post-selection.
 - **The response is conditioned on presence.** Cells with zero spiny-trunk species are
   set to `NA` in `01_biogeography.R`, so both models describe variation *among occupied
   cells*. They do not model presence/absence, and absences are not treated as zeros.
 - **Spatial** block cross-validation / block bootstrap for all performance and CIs — never
-  cell-level resampling (neighbouring cells are strongly autocorrelated).
+  cell-level resampling (neighbouring cells are strongly autocorrelated). Model 1 derives
+  **8°** from its residual autocorrelation range (~675 km, converted at the latitude where
+  most cells sit rather than a flat 111 km/deg). Model 2 still uses a **hardcoded 7°**
+  (`06_model2.R:61`, `:266`) that predates that derivation — the two have not been
+  reconciled. The descriptive summaries use 2°, from the much shorter within-ecoregion
+  range (125–175 km, `descriptive/within_ecoregion_correlogram.csv`).
 - **Model 1** characterises *where* richness is high (ALE response shapes), not which
   predictor is "most important"; the two megafauna metrics are read as one axis
-  (concurvity ≈ 0.85) and their redundancy is disclosed, not ranked.
+  (concurvity 0.84 each) and their redundancy is disclosed, not ranked. The entanglement is
+  not specific to them: all six predictors score 0.67–0.84, with productivity and vegetation
+  height both at 0.77. Note also that concurvity is measured under *random* 3-fold CV, not
+  spatial blocks — deliberately, since blocking would confound predictor overlap with
+  geography, but it means the values are optimistic as absolute numbers and should be read
+  as a ranking of entanglement rather than as calibrated R².
 - **Model 2** fits each clade independently, so clade–clade correlation is not a
   confounder, and fits every clade **twice** — alone, and alongside the four
   environmental covariates. The two settings share the same per-iteration block-bootstrap
@@ -83,19 +99,23 @@ woody-plant richness (partly controls for uneven botanical sampling).
   measure the constraint as much as the data.
 - **How firm is a slope?** Two independent perturbations. The spatial block bootstrap
   (200 resamples) gives the confidence interval on `slope_std`, reported for both settings.
-  `06_model2_jackknife.R` then drops 10/20/30% of the 74 mapped species, re-derives
-  relative richness and refits, reporting the spread of the slope across replicates — again
-  for both settings. The first asks whether the result depends on *where* you sample, the
-  second on *which species* were mapped; the bootstrap cannot see the latter.
+  `06_model2_jackknife.R` then drops 10/20/30% of the 74 mapped species (30 replicates per
+  fraction), re-derives relative richness and refits the slope — again for both settings.
+  The first asks whether the result depends on *where* you sample, the second on *which
+  species* were mapped; the bootstrap cannot see the latter.
+- **Neither perturbation measures confounding.** How much of a clade's association is
+  separable from environment is read from the variance partition
+  (`model2_diagnostics.csv`, `FIG_M2_r2_partition_*`): `unique_clade` is what the clade
+  adds on top of the environmental model, and it is negative where adding the clade makes
+  the out-of-fold fit worse.
 - Residual short-range spatial autocorrelation persists in both models and is disclosed
-  as a limitation. Adding an explicit lon/lat term *raises* CV R² (see
-  `spatial_term_test.csv`) but roughly halves the permutation importance of both
-  predictor groups — it absorbs the signal being characterised, which is why Model 1
-  omits it. The better fit is reported rather than hidden.
+  as a limitation. It is handled by resampling whole spatial blocks rather than by adding
+  a coordinate term to the model.
 - **One definition of megafauna richness across both models**: every clade layer is the
-  sum of its species ranges in the source CRS, bilinear-reprojected once, and Model 1's
-  `mammal_richness` is the sum of those clade layers — so the two models cannot drift
-  apart (`04_data_preparation.R`).
+  sum of its species ranges in the source CRS, reprojected once by **nearest neighbour**
+  (these are counts of 0/1 presences and PHYLACINE is coarser than the 0.1° template, so
+  bilinear would turn a count into a fraction), and Model 1's `mammal_richness` is the sum
+  of those clade layers — so the two models cannot drift apart (`04_data_preparation.R`).
 
 ## Reproducing
 1. **Install R packages** — `source("R/requirements.R")`.
@@ -121,12 +141,20 @@ Reported so the manuscript and the archive cannot drift apart:
 
 | quantity | value | where |
 |---|---|---|
-| Model 1 pooled out-of-fold R² | **0.426** | `model1/performance_summary.csv` |
-| — mean of per-fold R² (weaker statistic) | 0.367 (SD 0.162) | same |
-| Analysis unit | 1° → 4,806 cells (from 398,474 at 0.1°) | `model1/resolution_sweep.csv` |
-| Block size (residual range ~675 km) | 7° | `model1/residual_correlogram.csv` |
-| Residual Moran's I at 75 km | 0.735 | same |
-| Species-drop stability (30% dropped) | CV-R² 0.377 vs 0.367 full | `model1/jackknife.csv` |
+| Model 1 pooled out-of-fold R² | **0.370** (SD 0.022 over 10 fold allocations, range 0.331–0.390) | `model1/performance_summary.csv` |
+| — training R² / overfit gap | 0.562 / 0.192 | same |
+| — RMSE | 0.00148 | same |
+| — mean of per-fold R² (weaker statistic) | 0.323 (SD 0.154); fold 2.5–97.5% −0.084 to 0.560 | same |
+| Analysis unit | 1° → 4,806 cells (from 398,533 at 0.1°) | `model1/resolution_sweep.csv` |
+| Model 1 block size | **8°**, from a 675 km residual range at 91.7 km per degree of longitude (\|lat\| p90 = 34.5) | `model1/blocksize_recheck.csv` |
+| — confirmatory CV at the block the final residuals imply | 9° (825 km) gives 0.385, against 0.370 at 8° | `model1/blocksize_confirmatory.csv` |
+| Residual Moran's I at 75 km | 0.744 (SD 0.028 over 10 allocations × 5 subsamples); below 0.1 beyond 825 km | `model1/residual_correlogram.csv` |
+| Model 1 calibration slope | 0.996 (SD 0.079 over 10 allocations, range 0.915–1.163) | `model1/calibration.csv` |
+| Species-drop stability (30% dropped) | 0.351 ± 0.079 over 300 replicates vs 0.396 with the full pool (52 of 74 species kept; pooled OOF, 8° blocks, one fixed fold allocation) | `model1/jackknife.csv` |
+| Model 2 block size | **7°**, hardcoded rather than derived — it predates Model 1's derivation and has not been reconciled | `R/06_model2.R:61` |
+| Descriptive block bootstrap | 2°; 2,000 resamples per ecoregion. Biomes are **not** bootstrapped: their bar is an area-weighted IQR across cells, not a CI | `descriptive/ecoregion_summary_*.csv` |
+| Within-ecoregion range (block size source) | 175 km spiny and prickly, 125 km thorny → 2° | `descriptive/within_ecoregion_correlogram_summary.csv` |
+| Ecoregions keeping a CI | 302 of 462 (total); the rest hold fewer than 3 effective 2° blocks | `descriptive/ecoregion_summary_total.csv` |
 | Clade models, cells per continent | Americas 2,062 · Africa 1,414 · Asia 1,277 | `model2/` |
 
 Prefer **pooled OOF R²** to the mean of per-fold R²: per-fold R² divides by each fold's own

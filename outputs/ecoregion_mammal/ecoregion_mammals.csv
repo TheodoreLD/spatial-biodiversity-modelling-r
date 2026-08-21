@@ -1,77 +1,77 @@
-Ecoregion,Species
-Beni savanna,Alouatta_caraya
-Beni savanna,Alouatta_sara
-Beni savanna,Ateles_chamek
-Beni savanna,Blastocerus_dichotomus
-Beni savanna,Caipora_bambuiorum
-Beni savanna,Catagonus_stenocephalus
-Beni savanna,Catonyx_cuvieri
-Beni savanna,Cuniculus_paca
-Beni savanna,Equus_ferus
-Beni savanna,Eremotherium_laurillardi
-Beni savanna,Glyptodon_clavipes
-Beni savanna,Glyptotherium_cylindricum
-Beni savanna,Hemiauchenia_paradoxa
-Beni savanna,Hippidion_principale
-Beni savanna,Holmesina_paulacoutoi
-Beni savanna,Hoplophorus_euphractus
-Beni savanna,Hydrochoerus_hydrochaeris
-Beni savanna,Mazama_americana
-Beni savanna,Mazama_gouazoubira
-Beni savanna,Mazama_nemorivaga
-Beni savanna,Megatherium_americanum
-Beni savanna,Morenelaphus_brachyceros
-Beni savanna,Morenelaphus_lujanensis
-Beni savanna,Neochoerus_aesopi
-Beni savanna,Neolicaphrium_recens
-Beni savanna,Neuryurus_trabeculatus
-Beni savanna,Nothrotherium_maquinense
-Beni savanna,Notiomastodon_platensis
-Beni savanna,Ozotoceros_bezoarticus
-Beni savanna,Palaeolama_major
-Beni savanna,Pampatherium_humboldti
-Beni savanna,Paraceros_fragilis
-Beni savanna,Pecari_tajacu
-Beni savanna,Protopithecus_brasiliensis
-Beni savanna,Tapirus_rondoniensis
-Beni savanna,Tapirus_terrestris
-Beni savanna,Tayassu_pecari
-Beni savanna,Trigonodops_lopesi
-Beni savanna,Valgipes_bucklandi
-Beni savanna,Xenorhinotherium_bahiense
-Cross-Niger transition forests,Cephalophus_dorsalis
-Cross-Niger transition forests,Cephalophus_nigrifrons
-Cross-Niger transition forests,Cephalophus_silvicultor
-Cross-Niger transition forests,Cercocebus_torquatus
-Cross-Niger transition forests,Cercopithecus_nictitans
-Cross-Niger transition forests,Choeropsis_liberiensis
-Cross-Niger transition forests,Erythrocebus_patas
-Cross-Niger transition forests,Hippopotamus_amphibius
-Cross-Niger transition forests,Homo_sapiens
-Cross-Niger transition forests,Hyemoschus_aquaticus
-Cross-Niger transition forests,Kobus_kob
-Cross-Niger transition forests,Loxodonta_africana
-Cross-Niger transition forests,Pan_troglodytes
-Cross-Niger transition forests,Potamochoerus_porcus
-Cross-Niger transition forests,Syncerus_caffer
-Cross-Niger transition forests,Tragelaphus_scriptus
-Cross-Niger transition forests,Tragelaphus_spekii
-Tonle Sap freshwater swamp forests,Axis_porcinus
-Tonle Sap freshwater swamp forests,Bos_gaurus
-Tonle Sap freshwater swamp forests,Bos_javanicus
-Tonle Sap freshwater swamp forests,Bubalus_arnee
-Tonle Sap freshwater swamp forests,Elephas_maximus
-Tonle Sap freshwater swamp forests,Homo_spDenisova
-Tonle Sap freshwater swamp forests,Hylobates_pileatus
-Tonle Sap freshwater swamp forests,Hystrix_brachyura
-Tonle Sap freshwater swamp forests,Macaca_leonina
-Tonle Sap freshwater swamp forests,Muntiacus_vaginalis
-Tonle Sap freshwater swamp forests,Nomascus_gabriellae
-Tonle Sap freshwater swamp forests,Pygathrix_nigripes
-Tonle Sap freshwater swamp forests,Rhinoceros_sondaicus
-Tonle Sap freshwater swamp forests,Rucervus_eldii
-Tonle Sap freshwater swamp forests,Rusa_unicolor
-Tonle Sap freshwater swamp forests,Sus_bucculentus
-Tonle Sap freshwater swamp forests,Sus_scrofa
-Tonle Sap freshwater swamp forests,Tapirus_indicus
-Tonle Sap freshwater swamp forests,Trachypithecus_germaini
+ECO_ID,Ecoregion,Continent,Species
+565,Beni savanna,Americas,Alouatta_caraya
+565,Beni savanna,Americas,Alouatta_sara
+565,Beni savanna,Americas,Ateles_chamek
+565,Beni savanna,Americas,Blastocerus_dichotomus
+565,Beni savanna,Americas,Caipora_bambuiorum
+565,Beni savanna,Americas,Catagonus_stenocephalus
+565,Beni savanna,Americas,Catonyx_cuvieri
+565,Beni savanna,Americas,Cuniculus_paca
+565,Beni savanna,Americas,Equus_ferus
+565,Beni savanna,Americas,Eremotherium_laurillardi
+565,Beni savanna,Americas,Glyptodon_clavipes
+565,Beni savanna,Americas,Glyptotherium_cylindricum
+565,Beni savanna,Americas,Hemiauchenia_paradoxa
+565,Beni savanna,Americas,Hippidion_principale
+565,Beni savanna,Americas,Holmesina_paulacoutoi
+565,Beni savanna,Americas,Hoplophorus_euphractus
+565,Beni savanna,Americas,Hydrochoerus_hydrochaeris
+565,Beni savanna,Americas,Mazama_americana
+565,Beni savanna,Americas,Mazama_gouazoubira
+565,Beni savanna,Americas,Mazama_nemorivaga
+565,Beni savanna,Americas,Megatherium_americanum
+565,Beni savanna,Americas,Morenelaphus_brachyceros
+565,Beni savanna,Americas,Morenelaphus_lujanensis
+565,Beni savanna,Americas,Neochoerus_aesopi
+565,Beni savanna,Americas,Neolicaphrium_recens
+565,Beni savanna,Americas,Neuryurus_trabeculatus
+565,Beni savanna,Americas,Nothrotherium_maquinense
+565,Beni savanna,Americas,Notiomastodon_platensis
+565,Beni savanna,Americas,Ozotoceros_bezoarticus
+565,Beni savanna,Americas,Palaeolama_major
+565,Beni savanna,Americas,Pampatherium_humboldti
+565,Beni savanna,Americas,Paraceros_fragilis
+565,Beni savanna,Americas,Pecari_tajacu
+565,Beni savanna,Americas,Protopithecus_brasiliensis
+565,Beni savanna,Americas,Tapirus_rondoniensis
+565,Beni savanna,Americas,Tapirus_terrestris
+565,Beni savanna,Americas,Tayassu_pecari
+565,Beni savanna,Americas,Trigonodops_lopesi
+565,Beni savanna,Americas,Valgipes_bucklandi
+565,Beni savanna,Americas,Xenorhinotherium_bahiense
+6,Cross-Niger transition forests,Africa,Cephalophus_dorsalis
+6,Cross-Niger transition forests,Africa,Cephalophus_nigrifrons
+6,Cross-Niger transition forests,Africa,Cephalophus_silvicultor
+6,Cross-Niger transition forests,Africa,Cercocebus_torquatus
+6,Cross-Niger transition forests,Africa,Cercopithecus_nictitans
+6,Cross-Niger transition forests,Africa,Choeropsis_liberiensis
+6,Cross-Niger transition forests,Africa,Erythrocebus_patas
+6,Cross-Niger transition forests,Africa,Hippopotamus_amphibius
+6,Cross-Niger transition forests,Africa,Homo_sapiens
+6,Cross-Niger transition forests,Africa,Hyemoschus_aquaticus
+6,Cross-Niger transition forests,Africa,Kobus_kob
+6,Cross-Niger transition forests,Africa,Loxodonta_africana
+6,Cross-Niger transition forests,Africa,Pan_troglodytes
+6,Cross-Niger transition forests,Africa,Potamochoerus_porcus
+6,Cross-Niger transition forests,Africa,Syncerus_caffer
+6,Cross-Niger transition forests,Africa,Tragelaphus_scriptus
+6,Cross-Niger transition forests,Africa,Tragelaphus_spekii
+285,Tonle Sap freshwater swamp forests,Asia,Axis_porcinus
+285,Tonle Sap freshwater swamp forests,Asia,Bos_gaurus
+285,Tonle Sap freshwater swamp forests,Asia,Bos_javanicus
+285,Tonle Sap freshwater swamp forests,Asia,Bubalus_arnee
+285,Tonle Sap freshwater swamp forests,Asia,Elephas_maximus
+285,Tonle Sap freshwater swamp forests,Asia,Homo_spDenisova
+285,Tonle Sap freshwater swamp forests,Asia,Hylobates_pileatus
+285,Tonle Sap freshwater swamp forests,Asia,Hystrix_brachyura
+285,Tonle Sap freshwater swamp forests,Asia,Macaca_leonina
+285,Tonle Sap freshwater swamp forests,Asia,Muntiacus_vaginalis
+285,Tonle Sap freshwater swamp forests,Asia,Nomascus_gabriellae
+285,Tonle Sap freshwater swamp forests,Asia,Pygathrix_nigripes
+285,Tonle Sap freshwater swamp forests,Asia,Rhinoceros_sondaicus
+285,Tonle Sap freshwater swamp forests,Asia,Rucervus_eldii
+285,Tonle Sap freshwater swamp forests,Asia,Rusa_unicolor
+285,Tonle Sap freshwater swamp forests,Asia,Sus_bucculentus
+285,Tonle Sap freshwater swamp forests,Asia,Sus_scrofa
+285,Tonle Sap freshwater swamp forests,Asia,Tapirus_indicus
+285,Tonle Sap freshwater swamp forests,Asia,Trachypithecus_germaini
