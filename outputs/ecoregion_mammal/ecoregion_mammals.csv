@@ -1,77 +1,111 @@
-ECO_ID,Ecoregion,Continent,Species
-565,Beni savanna,Americas,Alouatta_caraya
-565,Beni savanna,Americas,Alouatta_sara
-565,Beni savanna,Americas,Ateles_chamek
-565,Beni savanna,Americas,Blastocerus_dichotomus
-565,Beni savanna,Americas,Caipora_bambuiorum
-565,Beni savanna,Americas,Catagonus_stenocephalus
-565,Beni savanna,Americas,Catonyx_cuvieri
-565,Beni savanna,Americas,Cuniculus_paca
-565,Beni savanna,Americas,Equus_ferus
-565,Beni savanna,Americas,Eremotherium_laurillardi
-565,Beni savanna,Americas,Glyptodon_clavipes
-565,Beni savanna,Americas,Glyptotherium_cylindricum
-565,Beni savanna,Americas,Hemiauchenia_paradoxa
-565,Beni savanna,Americas,Hippidion_principale
-565,Beni savanna,Americas,Holmesina_paulacoutoi
-565,Beni savanna,Americas,Hoplophorus_euphractus
-565,Beni savanna,Americas,Hydrochoerus_hydrochaeris
-565,Beni savanna,Americas,Mazama_americana
-565,Beni savanna,Americas,Mazama_gouazoubira
-565,Beni savanna,Americas,Mazama_nemorivaga
-565,Beni savanna,Americas,Megatherium_americanum
-565,Beni savanna,Americas,Morenelaphus_brachyceros
-565,Beni savanna,Americas,Morenelaphus_lujanensis
-565,Beni savanna,Americas,Neochoerus_aesopi
-565,Beni savanna,Americas,Neolicaphrium_recens
-565,Beni savanna,Americas,Neuryurus_trabeculatus
-565,Beni savanna,Americas,Nothrotherium_maquinense
-565,Beni savanna,Americas,Notiomastodon_platensis
-565,Beni savanna,Americas,Ozotoceros_bezoarticus
-565,Beni savanna,Americas,Palaeolama_major
-565,Beni savanna,Americas,Pampatherium_humboldti
-565,Beni savanna,Americas,Paraceros_fragilis
-565,Beni savanna,Americas,Pecari_tajacu
-565,Beni savanna,Americas,Protopithecus_brasiliensis
-565,Beni savanna,Americas,Tapirus_rondoniensis
-565,Beni savanna,Americas,Tapirus_terrestris
-565,Beni savanna,Americas,Tayassu_pecari
-565,Beni savanna,Americas,Trigonodops_lopesi
-565,Beni savanna,Americas,Valgipes_bucklandi
-565,Beni savanna,Americas,Xenorhinotherium_bahiense
-6,Cross-Niger transition forests,Africa,Cephalophus_dorsalis
-6,Cross-Niger transition forests,Africa,Cephalophus_nigrifrons
-6,Cross-Niger transition forests,Africa,Cephalophus_silvicultor
-6,Cross-Niger transition forests,Africa,Cercocebus_torquatus
-6,Cross-Niger transition forests,Africa,Cercopithecus_nictitans
-6,Cross-Niger transition forests,Africa,Choeropsis_liberiensis
-6,Cross-Niger transition forests,Africa,Erythrocebus_patas
-6,Cross-Niger transition forests,Africa,Hippopotamus_amphibius
-6,Cross-Niger transition forests,Africa,Homo_sapiens
-6,Cross-Niger transition forests,Africa,Hyemoschus_aquaticus
-6,Cross-Niger transition forests,Africa,Kobus_kob
-6,Cross-Niger transition forests,Africa,Loxodonta_africana
-6,Cross-Niger transition forests,Africa,Pan_troglodytes
-6,Cross-Niger transition forests,Africa,Potamochoerus_porcus
-6,Cross-Niger transition forests,Africa,Syncerus_caffer
-6,Cross-Niger transition forests,Africa,Tragelaphus_scriptus
-6,Cross-Niger transition forests,Africa,Tragelaphus_spekii
-285,Tonle Sap freshwater swamp forests,Asia,Axis_porcinus
-285,Tonle Sap freshwater swamp forests,Asia,Bos_gaurus
-285,Tonle Sap freshwater swamp forests,Asia,Bos_javanicus
-285,Tonle Sap freshwater swamp forests,Asia,Bubalus_arnee
-285,Tonle Sap freshwater swamp forests,Asia,Elephas_maximus
-285,Tonle Sap freshwater swamp forests,Asia,Homo_spDenisova
-285,Tonle Sap freshwater swamp forests,Asia,Hylobates_pileatus
-285,Tonle Sap freshwater swamp forests,Asia,Hystrix_brachyura
-285,Tonle Sap freshwater swamp forests,Asia,Macaca_leonina
-285,Tonle Sap freshwater swamp forests,Asia,Muntiacus_vaginalis
-285,Tonle Sap freshwater swamp forests,Asia,Nomascus_gabriellae
-285,Tonle Sap freshwater swamp forests,Asia,Pygathrix_nigripes
-285,Tonle Sap freshwater swamp forests,Asia,Rhinoceros_sondaicus
-285,Tonle Sap freshwater swamp forests,Asia,Rucervus_eldii
-285,Tonle Sap freshwater swamp forests,Asia,Rusa_unicolor
-285,Tonle Sap freshwater swamp forests,Asia,Sus_bucculentus
-285,Tonle Sap freshwater swamp forests,Asia,Sus_scrofa
-285,Tonle Sap freshwater swamp forests,Asia,Tapirus_indicus
-285,Tonle Sap freshwater swamp forests,Asia,Trachypithecus_germaini
+ECO_ID,Ecoregion,Continent,Basis,EffBlocks,CellsInEcoregion,RichnessCI,Species
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Alouatta_caraya
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Alouatta_sara
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Ateles_chamek
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Blastocerus_dichotomus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Caipora_bambuiorum
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Catagonus_stenocephalus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Catonyx_cuvieri
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Cuniculus_paca
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Equus_ferus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Eremotherium_laurillardi
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Glyptodon_clavipes
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Glyptotherium_cylindricum
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Hemiauchenia_paradoxa
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Hippidion_principale
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Holmesina_paulacoutoi
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Hoplophorus_euphractus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Hydrochoerus_hydrochaeris
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Mazama_americana
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Mazama_gouazoubira
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Mazama_nemorivaga
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Megatherium_americanum
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Morenelaphus_brachyceros
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Morenelaphus_lujanensis
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Neochoerus_aesopi
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Neolicaphrium_recens
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Neuryurus_trabeculatus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Nothrotherium_maquinense
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Notiomastodon_platensis
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Ozotoceros_bezoarticus
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Palaeolama_major
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Pampatherium_humboldti
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Paraceros_fragilis
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Pecari_tajacu
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Protopithecus_brasiliensis
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Tapirus_rondoniensis
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Tapirus_terrestris
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Tayassu_pecari
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Trigonodops_lopesi
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Valgipes_bucklandi
+565,Beni savanna,Americas,highest mean,4.9,1042,7.72e-03-1.04e-02,Xenorhinotherium_bahiense
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Cephalophus_dorsalis
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Cephalophus_nigrifrons
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Cephalophus_silvicultor
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Cercocebus_torquatus
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Cercopithecus_nictitans
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Choeropsis_liberiensis
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Erythrocebus_patas
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Hippopotamus_amphibius
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Homo_sapiens
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Hyemoschus_aquaticus
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Kobus_kob
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Loxodonta_africana
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Pan_troglodytes
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Potamochoerus_porcus
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Syncerus_caffer
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Tragelaphus_scriptus
+6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Tragelaphus_spekii
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Alcelaphus_buselaphus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Camelus_dromedarius
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Ceratotherium_simum
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Damaliscus_hypsodon
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Damaliscus_lunatus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Diceros_bicornis
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Equus_quagga
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Erythrocebus_patas
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Eudorcas_albonotata
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Eudorcas_rufifrons
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Giraffa_camelopardalis
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hippopotamus_amphibius
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hippotragus_equinus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Homo_sapiens
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hystrix_cristata
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kobus_ellipsiprymnus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kobus_kob
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kobus_megaceros
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kolpochoerus_majus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Loxodonta_africana
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Oryx_beisa
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Ourebia_ourebi
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Papio_anubis
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Phacochoerus_africanus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Potamochoerus_larvatus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Redunca_redunca
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Rusingoryx_atopocranion
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Sylvicapra_grimmia
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Syncerus_caffer
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Tragelaphus_imberbis
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Tragelaphus_oryx
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Tragelaphus_scriptus
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Tragelaphus_spekii
+74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Tragelaphus_strepsiceros
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Axis_porcinus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Bos_gaurus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Bos_javanicus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Bubalus_arnee
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Elephas_maximus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Homo_spDenisova
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Hylobates_pileatus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Hystrix_brachyura
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Macaca_leonina
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Muntiacus_vaginalis
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Nomascus_gabriellae
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Pygathrix_nigripes
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Rhinoceros_sondaicus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Rucervus_eldii
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Rusa_unicolor
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Sus_bucculentus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Sus_scrofa
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Tapirus_indicus
+285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Trachypithecus_germaini

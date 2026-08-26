@@ -1,18 +1,23 @@
-Ecoregion,Order.1.2,SpeciesCount
-Beni savanna,Cetartiodactyla,13
-Beni savanna,Cingulata,6
-Beni savanna,Pilosa,5
-Beni savanna,Primates,5
-Beni savanna,Perissodactyla,4
-Beni savanna,Rodentia,3
-Beni savanna,Litopterna,2
-Beni savanna,Notoungulata,1
-Beni savanna,Proboscidea,1
-Cross-Niger transition forests,Cetartiodactyla,11
-Cross-Niger transition forests,Primates,5
-Cross-Niger transition forests,Proboscidea,1
-Tonle Sap freshwater swamp forests,Cetartiodactyla,9
-Tonle Sap freshwater swamp forests,Primates,6
-Tonle Sap freshwater swamp forests,Perissodactyla,2
-Tonle Sap freshwater swamp forests,Proboscidea,1
-Tonle Sap freshwater swamp forests,Rodentia,1
+Continent,Ecoregion,Basis,Order.1.2,SpeciesCount
+Africa,Cross-Niger transition forests,highest mean,Cetartiodactyla,11
+Africa,Cross-Niger transition forests,highest mean,Primates,5
+Africa,Cross-Niger transition forests,highest mean,Proboscidea,1
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Cetartiodactyla,26
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Perissodactyla,3
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Primates,3
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Proboscidea,1
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Rodentia,1
+Americas,Beni savanna,highest mean,Cetartiodactyla,13
+Americas,Beni savanna,highest mean,Cingulata,6
+Americas,Beni savanna,highest mean,Pilosa,5
+Americas,Beni savanna,highest mean,Primates,5
+Americas,Beni savanna,highest mean,Perissodactyla,4
+Americas,Beni savanna,highest mean,Rodentia,3
+Americas,Beni savanna,highest mean,Litopterna,2
+Americas,Beni savanna,highest mean,Notoungulata,1
+Americas,Beni savanna,highest mean,Proboscidea,1
+Asia,Tonle Sap freshwater swamp forests,highest mean,Cetartiodactyla,9
+Asia,Tonle Sap freshwater swamp forests,highest mean,Primates,6
+Asia,Tonle Sap freshwater swamp forests,highest mean,Perissodactyla,2
+Asia,Tonle Sap freshwater swamp forests,highest mean,Proboscidea,1
+Asia,Tonle Sap freshwater swamp forests,highest mean,Rodentia,1
