@@ -1,16 +1,19 @@
 # =============================================================================
 # 03_mammal_ecoregions.R
 # Present-natural large-herbivore species list for the richest ecoregion of each modelled
-# continental region. Only the Neotropic/Nearctic, Afrotropic and Indomalayan realms are
-# mapped to a region (Americas, Africa, Asia); Palearctic, Australasian, Oceanian and
-# Antarctic ecoregions are outside the study design and are dropped.
+# continental region.
 #
 # Two ecoregions are reported for a continent whose richest one is too thinly replicated for
-# 02 to attach a confidence interval to it (fewer than MIN_EFF_CI effective blocks). The
-# leader is kept, because it is the answer to the question asked; the best CI-backed
-# ecoregion is reported next to it, because the leader alone would present a species list
-# resting on an estimate the descriptive step declines to bound. `Basis` distinguishes them
-# and the effective block count travels with every row.
+# 02 to attach a confidence interval to it (fewer than MIN_EFF_CI effective blocks).
+#
+# LAYOUT
+#   1  settings          megafauna definition and which ranking file is read
+#   2  inputs            paths, all validated up front
+#   3  helpers           realm -> continent, presence test
+#   4  species pool      large terrestrial herbivores that have a range raster
+#   5  target ecoregions the richest per continent, plus a CI-backed companion if needed
+#   6  species lists     which of the pool occurs in each target ecoregion
+#   7  order counts      the same lists collapsed to taxonomic orders
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -20,14 +23,59 @@ suppressPackageStartupMessages({
 source("R/config.R")
 create_project_dirs()
 
+
+# =============================================================================
+# 1. SETTINGS
+# =============================================================================
+
+# What counts as a large herbivore. The three orders are dropped because they pass the mass
+# and diet filters without being large herbivores in the sense meant here.
+MASS_MIN_G     <- 5000
+EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
+
+# The ecoregion ranking is taken from the TOTAL condition, not prickly or thorny: the
+# question is which ecoregion is richest in spiny-trunk trees overall.
+RANKING_COND <- "total"
+
+
+# =============================================================================
+# 2. INPUTS — validated before any work starts
+# =============================================================================
 traits_path     <- require_file(paths$mammal_traits, "PHYLACINE traits")
 ranges_nat      <- paths$mammal_ranges
 ecoregions_path <- require_file(paths$ecoregions, "WWF ecoregions shapefile")
+ranking_path    <- require_file(
+  file.path(paths$descriptive, sprintf("ecoregion_summary_%s.csv", RANKING_COND)),
+  "ecoregion ranking from 02_descriptive.R (run step 2 first)")
 
-# ---- 1. Large terrestrial herbivorous mammals (>5 kg, plant-eating) ----------
+
+# =============================================================================
+# 3. HELPERS
+# =============================================================================
+
+# Only the Neotropic/Nearctic, Afrotropic and Indomalayan realms map to a modelled region.
+# Palearctic, Australasian, Oceanian and Antarctic ecoregions are outside the study design
+# and fall out as NA, which section 5 then filters away.
+realm_to_continent <- function(r) {
+  r <- tolower(as.character(r))
+  ifelse(grepl("neotrop|nearctic", r), "Americas",
+  ifelse(grepl("afrotrop", r),         "Africa",
+  ifelse(grepl("indo.?malay", r),      "Asia", NA_character_)))
+}
+
+# Does this species range overlap the polygon at all? Ranges are 0/1 presence rasters.
+present_in_poly <- function(r_path, poly_sf) {
+  vals <- terra::extract(rast(r_path), vect(poly_sf), ID = FALSE)[[1]]
+  any(vals == 1, na.rm = TRUE)
+}
+
+
+# =============================================================================
+# 4. SPECIES POOL — large terrestrial herbivores (>5 kg, plant-eating) with ranges
+# =============================================================================
 traits0 <- read_csv(traits_path, show_col_types = FALSE) |>
-  filter(Mass.g > 5000, Terrestrial == 1, Diet.Plant > 0,
-         !Order.1.2 %in% c("Carnivora", "Dasyuromorphia", "Afrosoricida")) |>
+  filter(Mass.g > MASS_MIN_G, Terrestrial == 1, Diet.Plant > 0,
+         !Order.1.2 %in% EXCLUDE_ORDERS) |>
   mutate(raster_path = file.path(ranges_nat, paste0(Binomial.1.2, ".tif")))
 
 # A partial range download would otherwise shorten every species list without a trace.
@@ -42,20 +90,12 @@ if (nrow(traits) == 0)
   stop("No eligible species have range rasters under ", ranges_nat, call. = FALSE)
 message(nrow(traits), " large herbivores with ranges")
 
-# ---- 2. Target ecoregions (richest relative spiny-trunk richness per continent)
+
+# =============================================================================
+# 5. TARGET ECOREGIONS — richest relative spiny-trunk richness per continent
+# =============================================================================
 eco <- st_read(ecoregions_path, quiet = TRUE) |> st_make_valid()
 if (!"REALM" %in% names(eco)) stop("Ecoregions shapefile has no REALM field", call. = FALSE)
-
-realm_to_continent <- function(r) {
-  r <- tolower(as.character(r))
-  ifelse(grepl("neotrop|nearctic", r), "Americas",
-  ifelse(grepl("afrotrop", r),         "Africa",
-  ifelse(grepl("indo.?malay", r),      "Asia", NA_character_)))
-}
-
-ranking_path <- require_file(
-  file.path(paths$descriptive, "ecoregion_summary_total.csv"),
-  "ecoregion ranking from 02_descriptive.R (run step 2 first)")
 
 ranked <- read_csv(ranking_path, show_col_types = FALSE) |>
   left_join(eco |> st_drop_geometry() |> distinct(ECO_ID, REALM), by = "ECO_ID") |>
@@ -102,9 +142,15 @@ selected_ecos <- eco |>
   left_join(target_ecos |> dplyr::select(ECO_ID, continent, basis, eff_blocks, lo, hi, n_cells),
             by = "ECO_ID")
 
-# ---- 3. Reproject to match species rasters -----------------------------------
-ref_rast <- rast(traits$raster_path[1])
-crs_ref  <- crs(ref_rast)
+
+# =============================================================================
+# 6. SPECIES LISTS — which of the pool occurs in each target ecoregion
+# =============================================================================
+
+# Align the polygons to the species rasters rather than the other way round, and refuse to
+# proceed if the rasters disagree among themselves: a single odd CRS would silently produce
+# an empty species list for every ecoregion.
+crs_ref <- crs(rast(traits$raster_path[1]))
 odd <- traits$raster_path[!vapply(traits$raster_path,
                                   function(p) identical(crs(rast(p)), crs_ref), logical(1))]
 if (length(odd))
@@ -112,13 +158,6 @@ if (length(odd))
        basename(traits$raster_path[1]), ", e.g. ", basename(odd[1]), call. = FALSE)
 selected_ecos <- st_transform(selected_ecos, crs = crs_ref)
 
-# ---- 4. Presence test --------------------------------------------------------
-present_in_poly <- function(r_path, poly_sf) {
-  vals <- terra::extract(rast(r_path), vect(poly_sf), ID = FALSE)[[1]]
-  any(vals == 1, na.rm = TRUE)
-}
-
-# ---- 5. Species list per ecoregion -------------------------------------------
 # The reliability of the underlying richness estimate travels with every species row, so a
 # list drawn from a 1.4-effective-block ecoregion cannot be read as if it were drawn from a
 # well-replicated one.
@@ -139,7 +178,10 @@ ecoregion_unnested <- ecoregion_species |>
 
 write_csv(ecoregion_unnested, file.path(paths$ecoregion_mammal, "ecoregion_mammals.csv"))
 
-# ---- 6. Order counts per region ----------------------------------------------
+
+# =============================================================================
+# 7. ORDER COUNTS — the same lists collapsed to taxonomic orders
+# =============================================================================
 region_order_counts <- ecoregion_unnested |>
   distinct(Continent, Ecoregion, Basis, Species) |>
   left_join(traits |> dplyr::select(Binomial.1.2, Order.1.2),

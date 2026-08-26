@@ -4,28 +4,13 @@
 # Inputs (paths from R/config.R): the Biogeography rasters folder (Absolute_/Relative_
 # Richness_*.tif), the Ecoregions2017 shapefile, and data/assets/world_borders.geojson.
 #
-# LAYOUT. Everything is computed before anything is drawn, so the script reads in the
-# order the analysis actually depends on:
-#   1  settings      every tunable constant, in one place
+#   1  settings      every tunable constant
 #   2  appearance    theme, biome palette, label shortening
-#   3  helpers       weighted statistics and great-circle distance (pure functions)
+#   3  helpers       weighted statistics and great-circle distance
 #   4  overlay       assign each 0.1 deg cell to its ecoregion, biome and area weight
 #   5  block size    within-ecoregion autocorrelation range -> bootstrap block in degrees
 #   6  summaries     biome densities + ecoregion means with block-bootstrap CIs
 #   7  figures       maps, biome panel, ecoregion panel, Fig-3 composite
-#
-# DOMAIN. Relative richness is defined only where spiny-trunk species occur: 01 sets an
-# absolute richness of 0 to NA before dividing, so a cell holding trees but no spiny-trunk
-# species carries no value rather than a zero. Every statistic below is therefore
-# conditional on presence -- "where these trees occur, what share of the woody flora are
-# they" -- over 403,587 cells for the total condition: 27% of the retained land by cell
-# count, 36% by area. The two differ because cells are cos-latitude weighted while the
-# unoccupied ones skew polar; the run-time message reports the area figure, which is the
-# one consistent with the weighting used everywhere else.
-#
-# Biomes holding no spiny-trunk species at all therefore cannot appear in the figures
-# (Boreal Forests/Taiga and Tundra for every condition, plus Mediterranean for thorny).
-# summarise_cond() names them at run time rather than letting them vanish silently.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(sf); library(dplyr); library(readr)
   library(ggplot2); library(patchwork); library(scales) })
@@ -39,7 +24,7 @@ outdir <- paths$descriptive
 
 
 # =============================================================================
-# 1. SETTINGS — every knob the analysis exposes
+# 1. SETTINGS 
 # =============================================================================
 
 # The three richness conditions, used by the correlogram, the summaries and the figures.
@@ -56,18 +41,13 @@ NB_ECO        <- 2000   # Resample count for the ecoregion bootstrap.
 MIN_EFF_CI    <- 3      # fewer effective blocks than this and no interval is reported
 MIN_ECO_CELLS <- 10     # an ecoregion below this many cells is not summarised at all
 
-# --- biome density curves (section 6 computes them, section 7 draws them) ---
-# BW_FRAC is a fraction of each biome's OWN robust SD, not bw.nrd0: that rule's n^(-1/5)
-# term would smooth the 155,544-cell biome about six times harder than the 421-cell one,
-# so apparent smoothness would track cell count rather than spread. Under bw.nrd0 all
-# twelve biomes look multimodal and none of those modes survives wider smoothing, so
-# structure finer than this width is not interpretable.
+# --- biome density curves ---
 BW_FRAC  <- 0.30  # how much the biome density curves are smoothed: 30% of that biome's own spread
 RIDGE_H  <- 0.92  # how tall each density curve is drawn
 
 # --- within-ecoregion correlogram, which the block size is derived from ---
 CORR_MIN_CELLS <- 200               # ecoregions smaller than this cannot support a curve
-CORR_PER_UNIT  <- 150               # cells sampled per ecoregion (cost is quadratic in this)
+CORR_PER_UNIT  <- 150               # cells sampled per ecoregion 
 CORR_BINS      <- seq(0, 1200, 50)  # distance bins, km
 CORR_THRESH    <- 0.1               # correlation below which cells count as independent
 SUMM_MAX       <- 475               # longest distance shown in the correlogram summary table
@@ -105,7 +85,7 @@ blab <- function(b) gsub("Xeric Shrublands","Xeric Shrub.", gsub("Grasslands, Sa
 
 
 # =============================================================================
-# 3. HELPERS — pure functions, no side effects
+# 3. HELPERS 
 # =============================================================================
 
 # randomly resamples all elements of x with replacement, preserving duplicates for bootstrap analysis.
@@ -283,10 +263,7 @@ summarise_cond <- function(relfile, tag){
     ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME) |>
     mutate(rsd=(q75-q25)/1.349)   # robust SD: the scale the kernel width is set from
 
-  # Area-weighted density of the CELL distribution, one curve per biome. Each is truncated
-  # at its own 99.5th percentile so no curve is cut off by a limit set by another biome,
-  # and normalised to equal PEAK height: cell counts span 369x, so equal area would leave
-  # the smallest biome invisible. The count travels with each row instead.
+  # Area-weighted density of the CELL distribution, one curve per biome. 
   dens <- do.call(rbind, lapply(seq_len(nrow(bio)), function(i){
     z <- d[d$BIOME_NAME == bio$biome[i], ]
     dn <- density(z$rel, weights = z$w/sum(z$w), bw = bio$rsd[i]*BW_FRAC,
@@ -309,8 +286,6 @@ summarise_cond <- function(relfile, tag){
                   median(ec$eff_blocks), median(ec$n_blocks)))
   message(sprintf("  %s: biomes hold %d-%d ecoregions (effective %.1f-%.1f)",
                   tag, min(bio$n_eco), max(bio$n_eco), min(bio$eff_eco), max(bio$eff_eco)))
-  # A biome with no spiny-trunk species anywhere contributes no cells, so it drops out of
-  # every table and figure. Report it: an absent bar is a result, not missing data.
   absent <- setdiff(na.omit(unique(lut$BIOME_NAME[!lut$BIOME_NAME %in% EXCLUDE])), bio$biome)
   if (length(absent))
     message(sprintf("  %s: no spiny-trunk species anywhere in %s -> absent from the figures by construction",
@@ -388,8 +363,6 @@ CAP_E  <- sprintf(paste("Restricted to cells holding at least one spiny-trunk sp
                   BLOCK_ECO, MIN_EFF_CI)
 
 # ---- 7c. panel builders ------------------------------------------------------
-# Ridgeline of the weighted cell densities. Rows keep the descending-mean order of the
-# biome table, and biomes absent from panel C stay grey, so B and C read as one figure.
 mk_biome <- function(bio, dens, keyed) {
   bio$pos  <- match(bio$biome, rev(bio$biome))
   dens$pos <- bio$pos[match(dens$biome, bio$biome)]
@@ -413,8 +386,6 @@ mk_biome <- function(bio, dens, keyed) {
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
 
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
-  # the effective block count travels with the name: an interval the reader can see is backed by
-  # 34 blocks should not look like one backed by 4
   labs_txt <- sprintf("%s  (%.0f)", top$ECO_NAME, top$eff_blocks)
   top$lab  <- factor(labs_txt, levels=rev(labs_txt))
   top$no_ci <- is.na(top$lo)
