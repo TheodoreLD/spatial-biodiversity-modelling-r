@@ -4,6 +4,16 @@
 # Inputs (paths from R/config.R): the Biogeography rasters folder (Absolute_/Relative_
 # Richness_*.tif), the Ecoregions2017 shapefile, and data/assets/world_borders.geojson.
 #
+# LAYOUT. Everything is computed before anything is drawn, so the script reads in the
+# order the analysis actually depends on:
+#   1  settings      every tunable constant, in one place
+#   2  appearance    theme, biome palette, label shortening
+#   3  helpers       weighted statistics and great-circle distance (pure functions)
+#   4  overlay       assign each 0.1 deg cell to its ecoregion, biome and area weight
+#   5  block size    within-ecoregion autocorrelation range -> bootstrap block in degrees
+#   6  summaries     biome densities + ecoregion means with block-bootstrap CIs
+#   7  figures       maps, biome panel, ecoregion panel, Fig-3 composite
+#
 # DOMAIN. Relative richness is defined only where spiny-trunk species occur: 01 sets an
 # absolute richness of 0 to NA before dividing, so a cell holding trees but no spiny-trunk
 # species carries no value rather than a zero. Every statistic below is therefore
@@ -26,6 +36,46 @@ RELD   <- paths$biogeo_rasters   # folder with Relative_Richness_*.tif
 ECOSHP <- paths$ecoregions       # Ecoregions2017.shp
 BORD   <- paths$borders          # world_borders.geojson
 outdir <- paths$descriptive
+
+
+# =============================================================================
+# 1. SETTINGS — every knob the analysis exposes
+# =============================================================================
+
+# The three richness conditions, used by the correlogram, the summaries and the figures.
+RELF <- c(total   = "Relative_Richness_Tot.tif",
+          prickly = "Relative_Richness_Prickly.tif",
+          thorny  = "Relative_Richness_Thorny.tif")
+CLAB <- c(total = "spiny", prickly = "prickly", thorny = "thorny")   # for figure titles
+
+# Biomes that are not vegetated land, dropped everywhere.
+EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
+
+# --- ecoregion bootstrap ---
+NB_ECO        <- 2000   # Resample count for the ecoregion bootstrap.
+MIN_EFF_CI    <- 3      # fewer effective blocks than this and no interval is reported
+MIN_ECO_CELLS <- 10     # an ecoregion below this many cells is not summarised at all
+
+# --- biome density curves (section 6 computes them, section 7 draws them) ---
+# BW_FRAC is a fraction of each biome's OWN robust SD, not bw.nrd0: that rule's n^(-1/5)
+# term would smooth the 155,544-cell biome about six times harder than the 421-cell one,
+# so apparent smoothness would track cell count rather than spread. Under bw.nrd0 all
+# twelve biomes look multimodal and none of those modes survives wider smoothing, so
+# structure finer than this width is not interpretable.
+BW_FRAC  <- 0.30  # how much the biome density curves are smoothed: 30% of that biome's own spread
+RIDGE_H  <- 0.92  # how tall each density curve is drawn
+
+# --- within-ecoregion correlogram, which the block size is derived from ---
+CORR_MIN_CELLS <- 200               # ecoregions smaller than this cannot support a curve
+CORR_PER_UNIT  <- 150               # cells sampled per ecoregion (cost is quadratic in this)
+CORR_BINS      <- seq(0, 1200, 50)  # distance bins, km
+CORR_THRESH    <- 0.1               # correlation below which cells count as independent
+SUMM_MAX       <- 475               # longest distance shown in the correlogram summary table
+
+
+# =============================================================================
+# 2. APPEARANCE — theme, biome palette, label shortening
+# =============================================================================
 theme_set(theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
           plot.title=element_text(face="bold",size=11), plot.title.position="plot",
           axis.line=element_line(colour="grey30")))
@@ -48,64 +98,66 @@ BCOL <- c(
 GREY <- "#9e9e9e"
 bcol <- function(b) ifelse(b %in% names(BCOL), BCOL[b], GREY)
 
+# Biomes absent from the top-25 ecoregion panel are greyed, so panels B and C read together.
 bcol_keyed <- function(b, keyed) ifelse(b %in% keyed, bcol(b), GREY)
 blab <- function(b) gsub("Xeric Shrublands","Xeric Shrub.", gsub("Grasslands, Savannas & Shrublands","Grasslands & Savannas",
         gsub("Tropical & Subtropical","Trop./Subtrop.", b)))
-EXCLUDE <- c("N/A","Rock and Ice","Rock & Ice","Inland Water","Lakes","Lake")
 
-# ---- borders + maps ----------------------------------------------------------
-message("maps")
-borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
 
-mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
-  r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
-  vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
-  g <- ggplot() + geom_raster(data=d, aes(x,y,fill=v)) +
-    geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
-    scale_fill_viridis_c(option=pal, limits=c(min(d$v,na.rm=TRUE),vmax), oob=squish, name=clab,
-      labels=if (scale_1e3) label_number(scale=1e3) else waiver(),
-      guide=guide_colourbar(barwidth=unit(.38,"cm"), barheight=unit(if (inset) 4.4 else 5.4,"cm"))) +
-    coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
-    theme_void(base_size=11) +
-    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=10)),
-          plot.title.position="plot",
-          legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
-  if (inset)
-    g + theme(legend.position="inside", legend.position.inside=c(0.075, 0.33),
-              legend.justification=c(0.5, 0.5), legend.direction="vertical",
-              legend.background=element_rect(fill=alpha("white", .75), colour=NA),
-              legend.margin=margin(3,4,3,4), plot.margin=margin(2,2,2,2))
-  else
-    g + theme(legend.position="right", legend.justification="center",
-              legend.margin=margin(l=4), plot.margin=margin(2,2,2,2))
-}
-maps <- list(
-  c("Absolute_Richness_Tot.tif","Absolute richness of spiny-trunk species (0.1°)","Species richness","D","MAP_absolute_richness"),
-  c("Absolute_Richness_Prickly.tif","Absolute richness of prickly-trunk species (0.1°)","Species richness","D","MAP_absolute_prickly"),
-  c("Absolute_Richness_Thorny.tif","Absolute richness of thorny-trunk species (0.1°)","Species richness","D","MAP_absolute_thorny"),
-  c("Relative_Richness_Tot.tif","Relative richness of spiny-trunk species (0.1°)","Relative richness","D","MAP_relative_richness"),
-  c("Relative_Richness_Prickly.tif","Relative richness of prickly-trunk species (0.1°)","Relative richness","D","MAP_relative_prickly"),
-  c("Relative_Richness_Thorny.tif","Relative richness of thorny-trunk species (0.1°)","Relative richness","D","MAP_relative_thorny"))
-for (m in maps) ggsave(file.path(outdir,paste0(m[5],".png")), mk_map(m[1],m[2],m[3],m[4]), width=12, height=5.2, dpi=170)
+# =============================================================================
+# 3. HELPERS — pure functions, no side effects
+# =============================================================================
 
-# ---- overlay: assign each 0.1° cell to its ecoregion + biome -----------------
+# randomly resamples all elements of x with replacement, preserving duplicates for bootstrap analysis.
+boot_resample <- function(x) x[sample.int(length(x), length(x), replace=TRUE)]
+
+# calculates quantiles while accounting for unequal raster-cell areas
+# preventing smaller high-latitude cells from being overrepresented
+wquantile <- function(x, w, p){ o <- order(x); x <- x[o]; w <- w[o]
+  x[which(cumsum(w)/sum(w) >= p)[1]] }
+
+# estimates how many equally weighted independent units the unequal weights effectively represent.
+# converts unequal block or ecoregion weights into an “equivalent” number of equally sized units,
+# so one very large unit is not misleadingly counted as many independent units when judging whether there is enough information for a confidence interval
+kish <- function(W) sum(W)^2 / sum(W^2) # Kish effective sample size
+
+# repeatedly resamples entire spatial blocks and recalculates the area-weighted mean, producing
+# a distribution used to estimate uncertainty and confidence intervals while respecting spatial dependence
+boot_wmean <- function(v, w, b, nb=1000, seed=0){ set.seed(seed)
+  svw <- tapply(v*w, b, sum); sw <- tapply(w, b, sum); ub <- names(sw); o <- numeric(nb)
+  for (i in 1:nb){ s <- boot_resample(ub); o[i] <- sum(svw[s])/sum(sw[s]) }
+  o }
+
+# great-circle distance in kilometers for coordinates (Haversine formula)
+# coordinates into distance km to measure the range of spatial autocorrelation
+hav <- function(a,b,c,e){ p <- pi/180; dl <- (c-a)*p; dp <- (e-b)*p
+  6371*2*asin(pmin(1, sqrt(sin(dp/2)^2 + cos(b*p)*cos(e*p)*sin(dl/2)^2))) }
+
+
+# =============================================================================
+# 4. OVERLAY — assign each 0.1° cell to its ecoregion, biome and area weight
+# =============================================================================
 message("overlay (rasterize ecoregions)")
 # prepare ecoregion rasters and lookup table
 eco <- st_read(ECOSHP, quiet=TRUE) |> st_make_valid() |> st_transform(4326)
 tmpl <- rast(ext(-180,180,-90,90), resolution=0.1, crs="EPSG:4326")
-eco_id <- rasterize(vect(eco), tmpl, field="ECO_ID") 
-lut <- eco |> st_drop_geometry() |> distinct(ECO_ID, ECO_NAME, BIOME_NAME) 
+eco_id <- rasterize(vect(eco), tmpl, field="ECO_ID")
+lut <- eco |> st_drop_geometry() |> distinct(ECO_ID, ECO_NAME, BIOME_NAME)
 if (anyDuplicated(lut$ECO_ID))
   stop("ECO_ID maps to more than one ECO_NAME/BIOME_NAME in ", ECOSHP, call.=FALSE)
 # store cell coordinates, block IDs, ecoregion IDs, and area weights
-n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl) 
-col0 <- (seq_len(n)-1) %% nc; row0 <- (seq_len(n)-1) %/% nc 
+n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
+col0 <- (seq_len(n)-1) %% nc; row0 <- (seq_len(n)-1) %/% nc
 lon <- ev[["xmin"]] + (col0+0.5)*rs[1]; lat <- ev[["ymax"]] - (row0+0.5)*rs[2] # calculates the centre of every raster cell
 blk_at <- function(deg){ ix <- floor((lon+180)/deg); iy <- floor((lat+90)/deg); ix*(max(iy)+1) + iy } # group cells into blocks
 eid <- values(eco_id)[,1]
 message(sprintf("  %d of %d ecoregions captured a 0.1 deg cell centre",
                 sum(!is.na(unique(eid))), nrow(lut)))
 wgt <- cos(lat * pi/180) # account for change cells size with poles
+
+# assigns each raster cell its biome name by matching the cell’s ecoregion ID to the ecoregion lookup table
+bio_of  <- lut$BIOME_NAME[match(eid, lut$ECO_ID)]
+keepbase <- is.finite(eid) & !is.na(bio_of) & !bio_of %in% EXCLUDE
 
 # validate relative richness raster
 read_rel <- function(relfile){
@@ -115,78 +167,40 @@ read_rel <- function(relfile){
   values(r)[,1]
 }
 
-# Resample count for the ecoregion bootstrap.
-NB_ECO <- 2000
-MIN_EFF_CI <- 3
-MIN_ECO_CELLS <- 10
 
-# Kernel width for the biome densities, as a fraction of the robust SD (IQR/1.349) of the
-# biome being drawn. Deliberately NOT bw.nrd0: its n^(-1/5) term would smooth the
-# 155,544-cell biome about six times harder than the 421-cell one, so apparent smoothness
-# would track cell count rather than spread. A fixed fraction keeps the curves comparable.
-# Structure finer than this width is not interpretable: under bw.nrd0 every biome looks
-# multimodal, and none of those modes survives wider smoothing.
-BW_FRAC  <- 0.30
-RIDGE_H  <- 0.92   # peak height of a ridge in row units (below 1 keeps rows from touching)
-
-# randomly resamples all elements of x with replacement, preserving duplicates for bootstrap analysis.
-boot_resample <- function(x) x[sample.int(length(x), length(x), replace=TRUE)]
-
-# calculates quantiles while accounting for unequal raster-cell areas, preventing smaller high-latitude cells from being overrepresented
-wquantile <- function(x, w, p){ o <- order(x); x <- x[o]; w <- w[o]
-  x[which(cumsum(w)/sum(w) >= p)[1]] }
-
-# estimates how many equally weighted independent units the unequal weights effectively represent.
-# converts unequal block or ecoregion weights into an “equivalent” number of equally sized units, 
-# so one very large unit is not misleadingly counted as many independent units when judging whether there is enough information for a confidence interval
-kish <- function(W) sum(W)^2 / sum(W^2) # Kish effective sample size
-
-# repeatedly resamples entire spatial blocks and recalculates the area-weighted mean, producing 
-# a distribution used to estimate uncertainty and confidence intervals while respecting spatial dependence
-boot_wmean <- function(v, w, b, nb=1000, seed=0){ set.seed(seed) 
-  svw <- tapply(v*w, b, sum); sw <- tapply(w, b, sum); ub <- names(sw); o <- numeric(nb) 
-  for (i in 1:nb){ s <- boot_resample(ub); o[i] <- sum(svw[s])/sum(sw[s]) } 
-  o } 
-
-# ---- within-ecoregion autocorrelation range -> block size --------------------
-# great-circle distance in kilometers for coordinates (Haversine formula)
-# coordinates into distance km to measure the range of spatial autocorrelation
-hav <- function(a,b,c,e){ p <- pi/180; dl <- (c-a)*p; dp <- (e-b)*p
-  6371*2*asin(pmin(1, sqrt(sin(dp/2)^2 + cos(b*p)*cos(e*p)*sin(dl/2)^2))) }
-
-# assigns each raster cell its biome name by matching the cell’s ecoregion ID to the ecoregion lookup table
-bio_of  <- lut$BIOME_NAME[match(eid, lut$ECO_ID)]
-keepbase <- is.finite(eid) & !is.na(bio_of) & !bio_of %in% EXCLUDE
+# =============================================================================
+# 5. BLOCK SIZE — within-ecoregion autocorrelation range, converted to degrees
+# =============================================================================
 
 # estimates how far spatial autocorrelation extends within ecoregions or biomes, so an appropriate spatial-bootstrap block size can be chosen
 range_within <- function(relfile, tag, level, min_cells, per_unit, bins,
-                         thresh=0.1, seed=1){
+                         thresh=CORR_THRESH, seed=1){
   # Read relative-richness values and retain valid occupied land cells
-  rel  <- read_rel(relfile) 
-  keep <- keepbase & is.finite(rel) & rel > 0 
+  rel  <- read_rel(relfile)
+  keep <- keepbase & is.finite(rel) & rel > 0
   # Assign each retained cell to an ecoregion or biome
-  unit <- if (level == "ecoregion") as.character(eid)[keep] else bio_of[keep] 
+  unit <- if (level == "ecoregion") as.character(eid)[keep] else bio_of[keep]
   # Richness values and cell coordinates
-  v <- rel[keep]; x <- lon[keep]; y <- lat[keep] 
+  v <- rel[keep]; x <- lon[keep]; y <- lat[keep]
   # Retain units containing enough cells for the calculation
   tb <- table(unit); big <- names(tb)[tb >= min_cells]
   set.seed(seed)
   # Centre of each distance bin, in kilometres and prepare objects
-  mid <- (bins[-1] + bins[-length(bins)])/2 
+  mid <- (bins[-1] + bins[-length(bins)])/2
   num <- numeric(length(mid)); den <- numeric(length(mid))
-  nub <- numeric(length(mid)); used <- 0L 
+  nub <- numeric(length(mid)); used <- 0L
   # Analyse each sufficiently large ecoregion or biome separately
-  for (uu in big) { 
-    i <- which(unit == uu); if (length(i) > per_unit) i <- sample(i, per_unit) 
-    z <- scale(v[i])[,1]; if (!all(is.finite(z))) next 
+  for (uu in big) {
+    i <- which(unit == uu); if (length(i) > per_unit) i <- sample(i, per_unit)
+    z <- scale(v[i])[,1]; if (!all(is.finite(z))) next
     used <- used + 1L
-    D <- outer(seq_along(i), seq_along(i), function(a,b) hav(x[i][a], y[i][a], x[i][b], y[i][b])) 
-    P <- outer(z, z); k <- findInterval(D, bins); ok <- D > 0 & k >= 1 & k <= length(mid) 
+    D <- outer(seq_along(i), seq_along(i), function(a,b) hav(x[i][a], y[i][a], x[i][b], y[i][b]))
+    P <- outer(z, z); k <- findInterval(D, bins); ok <- D > 0 & k >= 1 & k <= length(mid)
     sm <- tapply(P[ok], factor(k[ok], levels=seq_along(mid)), sum); sm[is.na(sm)] <- 0  # Sum similarity values within each distance bin
     cnt <- as.numeric(table(factor(k[ok], levels=seq_along(mid)))) # Count cell pairs within each distance bin
     num <- num + as.numeric(sm)
     den <- den + cnt
-    nub <- nub + (cnt > 0) } 
+    nub <- nub + (cnt > 0) }
   # Mean spatial correlation in each distance bin
   I <- ifelse(den > 0, num/den, NA_real_)
   below <- is.finite(I) & I < thresh
@@ -200,31 +214,28 @@ range_within <- function(relfile, tag, level, min_cells, per_unit, bins,
 }
 
 message("within-ecoregion autocorrelation range")
-RELF3 <- c(total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif",
-           thorny="Relative_Richness_Thorny.tif")
 
 # Estimate within-ecoregion spatial autocorrelation for every richness condition
-cor_all <- do.call(rbind, lapply(names(RELF3), function(k)
-  range_within(RELF3[[k]], k, "ecoregion", min_cells=200, per_unit=150,
-               bins=seq(0,1200,50))))
+cor_all <- do.call(rbind, lapply(names(RELF), function(k)
+  range_within(RELF[[k]], k, "ecoregion", min_cells=CORR_MIN_CELLS,
+               per_unit=CORR_PER_UNIT, bins=CORR_BINS)))
 write_csv(cor_all, file.path(outdir, "within_ecoregion_correlogram.csv"))
 
 # Summary table
-SUMM_MAX <- 475
-mid_s <- sort(unique(cor_all$dist_km[cor_all$dist_km <= SUMM_MAX])) 
+mid_s <- sort(unique(cor_all$dist_km[cor_all$dist_km <= SUMM_MAX]))
 pick  <- function(k, f) f(cor_all[cor_all$condition == k, ])
 cor_summ <- data.frame(metric=c(sprintf("Spatial correlation at %g km", mid_s), "Range (km)",
                                 "Ecoregions", "Ecoregions contributing (min over rows above)"))
-for (k in names(RELF3))
+for (k in names(RELF))
   cor_summ[[k]] <- c(pick(k, function(x) x$spatial_corr[match(mid_s, x$dist_km)]),
                      pick(k, function(x) x$range_km[1]),
                      pick(k, function(x) x$n_units[1]),
-                     pick(k, function(x) min(x$n_units_bin[x$dist_km <= SUMM_MAX]))) 
+                     pick(k, function(x) min(x$n_units_bin[x$dist_km <= SUMM_MAX])))
 names(cor_summ) <- c("metric", "spiny", "prickly", "thorny")
 write_csv(cor_summ, file.path(outdir, "within_ecoregion_correlogram_summary.csv"))
 
 # converts the largest estimated spatial-autocorrelation range from kilometres into a conservative block size in degrees for the spatial bootstrap
-LAT90 <- max(vapply(RELF3, function(f){
+LAT90 <- max(vapply(RELF, function(f){
   r <- read_rel(f)
   as.numeric(quantile(abs(lat[keepbase & is.finite(r) & r > 0]), .90, na.rm=TRUE))
 }, numeric(1)))
@@ -243,6 +254,10 @@ message(sprintf("  within-ecoregion range %.0f km -> ecoregion block %d deg; bio
                 RANGE_KM, BLOCK_ECO))
 
 
+# =============================================================================
+# 6. SUMMARIES — biome densities, ecoregion means, block-bootstrap CIs
+# =============================================================================
+
 # Build the analysis table for one relative-richness condition
 build_d <- function(relfile){
   rel <- read_rel(relfile)
@@ -259,7 +274,7 @@ summarise_cond <- function(relfile, tag){
   wmean <- function(x) sum(x$rel * x$w)/sum(x$w)
   # Biome summaries
   bio <- d |> group_by(BIOME_NAME) |> group_modify(~{
-      tibble(mean=wmean(.x), 
+      tibble(mean=wmean(.x),
              q25=wquantile(.x$rel, .x$w, .25), q75=wquantile(.x$rel, .x$w, .75), # Area-weighted cell-level interquartile
              cell_median=wquantile(.x$rel, .x$w, .50),
              hi=wquantile(.x$rel, .x$w, .995),   # right end of the density for this biome
@@ -302,7 +317,7 @@ summarise_cond <- function(relfile, tag){
                     tag, paste(absent, collapse="; ")))
   message(sprintf("  %s: %d cells carry a value (%.1f%% of the retained land area)",
                   tag, sum(bio$n_cells), 100*sum(d$w)/sum(wgt[keepbase])))
-  
+
   # Check for strongly skewed biomde distribution
   skewed <- bio$biome[which(bio$mean < bio$q25 | bio$mean > bio$q75)] # Find biomes where the weighted mean lies outside the weighted IQR
   if (length(skewed))
@@ -315,13 +330,49 @@ summarise_cond <- function(relfile, tag){
 }
 
 message("biome/ecoregion distributions (block bootstrap)")
-S <- list(total=summarise_cond("Relative_Richness_Tot.tif","total"),
-          prickly=summarise_cond("Relative_Richness_Prickly.tif","prickly"),
-          thorny=summarise_cond("Relative_Richness_Thorny.tif","thorny"))
+S <- setNames(lapply(names(RELF), function(k) summarise_cond(RELF[[k]], k)), names(RELF))
 
 
-# ---- biome & ecoregion figures + composite -----------------------------------
-message("figures + composite")
+# =============================================================================
+# 7. FIGURES — maps, biome panel, ecoregion panel, Fig-3 composite
+# =============================================================================
+
+# ---- 7a. maps ----------------------------------------------------------------
+message("maps")
+borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
+
+mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
+  r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
+  vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
+  g <- ggplot() + geom_raster(data=d, aes(x,y,fill=v)) +
+    geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
+    scale_fill_viridis_c(option=pal, limits=c(min(d$v,na.rm=TRUE),vmax), oob=squish, name=clab,
+      labels=if (scale_1e3) label_number(scale=1e3) else waiver(),
+      guide=guide_colourbar(barwidth=unit(.38,"cm"), barheight=unit(if (inset) 4.4 else 5.4,"cm"))) +
+    coord_sf(xlim=c(-180,180), ylim=c(-58,84), expand=FALSE) + labs(title=ttl) +
+    theme_void(base_size=11) +
+    theme(plot.title=element_text(face="bold", size=12, hjust=0, margin=margin(t=3,b=10)),
+          plot.title.position="plot",
+          legend.title=element_text(size=8.5, hjust=0), legend.text=element_text(size=7.5))
+  if (inset)
+    g + theme(legend.position="inside", legend.position.inside=c(0.075, 0.33),
+              legend.justification=c(0.5, 0.5), legend.direction="vertical",
+              legend.background=element_rect(fill=alpha("white", .75), colour=NA),
+              legend.margin=margin(3,4,3,4), plot.margin=margin(2,2,2,2))
+  else
+    g + theme(legend.position="right", legend.justification="center",
+              legend.margin=margin(l=4), plot.margin=margin(2,2,2,2))
+}
+maps <- list(
+  c("Absolute_Richness_Tot.tif","Absolute richness of spiny-trunk species (0.1°)","Species richness","D","MAP_absolute_richness"),
+  c("Absolute_Richness_Prickly.tif","Absolute richness of prickly-trunk species (0.1°)","Species richness","D","MAP_absolute_prickly"),
+  c("Absolute_Richness_Thorny.tif","Absolute richness of thorny-trunk species (0.1°)","Species richness","D","MAP_absolute_thorny"),
+  c("Relative_Richness_Tot.tif","Relative richness of spiny-trunk species (0.1°)","Relative richness","D","MAP_relative_richness"),
+  c("Relative_Richness_Prickly.tif","Relative richness of prickly-trunk species (0.1°)","Relative richness","D","MAP_relative_prickly"),
+  c("Relative_Richness_Thorny.tif","Relative richness of thorny-trunk species (0.1°)","Relative richness","D","MAP_relative_thorny"))
+for (m in maps) ggsave(file.path(outdir,paste0(m[5],".png")), mk_map(m[1],m[2],m[3],m[4]), width=12, height=5.2, dpi=170)
+
+# ---- 7b. axis labels and captions --------------------------------------------
 XLAB_B <- expression("Relative richness ("%*%10^-3*")")
 XLAB_E <- expression("Mean relative richness ("%*%10^-3*", 95% CI)")
 CAP_B  <- paste0("Restricted to cells holding at least one spiny-trunk species. Area-weighted density of\n",
@@ -336,6 +387,7 @@ CAP_E  <- sprintf(paste("Restricted to cells holding at least one spiny-trunk sp
                         "blocks, too few for a percentile bootstrap, so no interval is reported."),
                   BLOCK_ECO, MIN_EFF_CI)
 
+# ---- 7c. panel builders ------------------------------------------------------
 # Ridgeline of the weighted cell densities. Rows keep the descending-mean order of the
 # biome table, and biomes absent from panel C stay grey, so B and C read as one figure.
 mk_biome <- function(bio, dens, keyed) {
@@ -376,9 +428,9 @@ mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
     theme(axis.text.y=element_text(size=9), legend.position="right",
           legend.text=element_text(size=7), legend.title=element_text(size=8),
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
-CLAB <- c(total="spiny", prickly="prickly", thorny="thorny")   
-RELF <- c(total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif",
-          thorny="Relative_Richness_Thorny.tif")
+
+# ---- 7d. per-condition figures and the composite -----------------------------
+message("figures + composite")
 for (cond in names(S)){
   bio <- S[[cond]]$bio; ec <- S[[cond]]$ec; dens <- S[[cond]]$dens
   keyed <- unique(head(ec,25)$BIOME_NAME)
@@ -394,7 +446,7 @@ for (cond in names(S)){
                expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
   pb <- mk_biome(bio, dens, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
- 
+
   # The ridgeline needs more vertical room than the point-and-bar panel it replaced, so the
   # second row takes more of the height and the whole figure is taller.
   comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.12))) +
