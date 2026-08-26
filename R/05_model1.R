@@ -35,10 +35,38 @@ source("R/config.R")
 STACK  <- paths$predictor_stack   # outputs/raster_model/predictor_stack.tif (built by 04)
 outdir <- paths$model1; dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
+# =============================================================================
+# SETTINGS - every value the run is parameterised by, and every env var it honours
+# =============================================================================
+
+# ---- which sections run (see the header for the M1_RUN vocabulary) ----
 .M1_RUN <- trimws(strsplit(Sys.getenv("M1_RUN", unset = "all"), "[ ,]+")[[1]])
 run_sec <- function(x) "all" %in% .M1_RUN || x %in% .M1_RUN
 message("sections requested: ", paste(.M1_RUN, collapse = ", "))
 
+# ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) ----
+# Chosen by the resolution sweep (resolution_sweep.csv)
+AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
+
+# ---- repetition counts ----
+# Every estimate that depends on a random draw is averaged over several of them, so these
+# are the runtime levers. Raising one costs time; lowering it costs precision in a tail.
+NBLK  <- as.integer(Sys.getenv("M1_BLOCK_REPS", unset = "5"))    # correlogram: allocations x subsamples
+NCV   <- as.integer(Sys.getenv("M1_CV_REPS",    unset = "10"))   # performance: fold allocations
+NSEED <- as.integer(Sys.getenv("M1_CV_SEEDS",   unset = "5"))    # resolution + transform: allocations
+# 200 leaves only ~5 draws in each 2.5% tail; 500 gives ~12. Each replicate now costs two
+# fits (early stopping, then refit), so this is the main runtime lever for section 6.
+NB    <- as.integer(Sys.getenv("M1_BOOT",       unset = "500"))
+# 300, not 100: the envelope is a 2.5/97.5 percentile, so 100 replicates leave only ~2.5
+# draws in each tail. 300 gives ~7.5, comparable to the block bootstrap at NB=500.
+NREP  <- as.integer(Sys.getenv("M1_DROP_REPS",  unset = "300"))
+# Only the fraction the manuscript reports. The 10% and 20% runs cost two thirds of this
+# section and fed nothing beyond a mean and SD, so the budget goes to more replicates at
+# the fraction that is actually plotted and quoted.
+FRACS    <- as.numeric(strsplit(Sys.getenv("M1_DROP_FRACS", unset = "0.3"), ",")[[1]])
+ALE_FRAC <- .3            # ALE is evaluated only for the most severe deletion scenario
+
+# ---- what is modelled ----
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
 HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV, HERB); TARGET <- "trunkrichness"
@@ -46,9 +74,27 @@ NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
           dry_mean="Dry-season deciduousness", height="Vegetation height",
           mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
 
+# ---- CatBoost ----
+# shared CatBoost settings: RMSE loss, 0.8 row/feature subsampling, silent
+# random_seed and thread_count pinned so the archive is bit-reproducible: CatBoost defaults
+# thread_count to all cores, and the float reduction order varies with it.
+BASE <- list(loss_function = "RMSE", rsm = 0.8, subsample = 0.8,
+             random_seed = 1, thread_count = 4,
+             allow_writing_files = FALSE, logging_level = "Silent")
+PRELIM <- list(depth=6, learning_rate=.05, l2_leaf_reg=3)  # section 1 only, before tuning
+
+
+# =============================================================================
+# INPUTS
+# =============================================================================
 ps <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
 
-# ---------------- shared machinery ----------------
+
+# =============================================================================
+# SHARED MACHINERY
+# =============================================================================
+
+# ---- generic ----
 # R2 of predictions yh against observed y
 r2 <- function(y, yh) 1 - sum((y - yh)^2)/sum((y - mean(y))^2)
 
@@ -69,13 +115,7 @@ hav <- function(lo1, la1, lo2, la2){
   2*R*asin(sqrt(a))
 }
 
-# shared CatBoost settings: RMSE loss, 0.8 row/feature subsampling, silent
-# random_seed and thread_count pinned so the archive is bit-reproducible: CatBoost defaults
-# thread_count to all cores, and the float reduction order varies with it.
-BASE <- list(loss_function = "RMSE", rsm = 0.8, subsample = 0.8,
-             random_seed = 1, thread_count = 4,
-             allow_writing_files = FALSE, logging_level = "Silent")
-
+# ---- CatBoost ----
 # create the data format for CatBoost
 pool <- function(d, lab = NULL, preds = PREDS) {
   X <- as.matrix(d[, preds, drop = FALSE])
@@ -85,6 +125,7 @@ pool <- function(d, lab = NULL, preds = PREDS) {
 # predict with model m on data d
 pr <- function(m, d) catboost::catboost.predict(m, pool(d))
 
+# ---- ALE ----
 # Defined here, not inside section 6: the species-drop analysis uses it too, so a run with
 # M1_RUN="core,drop" must still have it.
 .empty_bins <- 0L
@@ -138,6 +179,7 @@ fit_final <- function(d, b, par, seed = 0){
        n_trees = as.integer(nt))
 }
 
+# ---- resampling ----
 # Bootstrap the data by resampling whole blocks with replacement: create new dataset
 block_boot_rows <- function(bid){
   by <- split(seq_along(bid), bid)
@@ -150,9 +192,7 @@ block_boot_rows <- function(bid){
 # =============================================================================
 message("0. INPUTS + COLLINEARITY")
 df0 <- as.data.frame(ps, xy=TRUE, na.rm=TRUE) |> rename(longitude=x, latitude=y)
-# ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) -------------------
-# Chosen by the resolution sweep (resolution_sweep.csv)
-AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
+# ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG set in SETTINGS) --------
 if (AGG > 1) {
   df <- df0 |>
     mutate(R = floor((90 - latitude)/(0.1*AGG)), C = floor((longitude + 180)/(0.1*AGG))) |>
@@ -192,8 +232,6 @@ message("  concurvity R2: ", paste(PREDS, round(concurv,2), collapse="  "))
 # =============================================================================
 message("1. BLOCK SIZE")
 
-NBLK <- as.integer(Sys.getenv("M1_BLOCK_REPS", unset = "5"))
-PRELIM <- list(depth=6, learning_rate=.05, l2_leaf_reg=3)
 b5 <- blk(df$longitude, df$latitude, 5)
 NSUB <- min(2500, nrow(df))
 bins <- seq(0,3000,150); mids <- (bins[-1]+bins[-length(bins)])/2 # define the distance classes
@@ -305,7 +343,6 @@ write_csv(data.frame(source=c("preliminary (depth 6, l2 3)", "tuned"),
 # 4. PERFORMANCE (repeated spatial CV + overfit gap)
 # =============================================================================
 message("4. PERFORMANCE")
-NCV <- as.integer(Sys.getenv("M1_CV_REPS", unset = "10"))
 fr <- c(); trr <- c(); pooled_v <- numeric(NCV); rmse_v <- numeric(NCV)
 oof <- rep(NA_real_, nrow(df))          # allocation 1, for the plotted diagnostic panels
 OOF <- matrix(NA_real_, nrow(df), NCV)  # all allocations, for the averaged diagnostics
@@ -391,9 +428,6 @@ if (run_sec("ale")) {
 # =============================================================================
 message("6. ENSEMBLE (ALE CIs)")
 
-# 200 leaves only ~5 draws in each 2.5% tail; 500 gives ~12. Each replicate now costs two
-# fits (early stopping, then refit), so this is the main runtime lever for section 6.
-NB <- as.integer(Sys.getenv("M1_BOOT", unset = "500"))
 grids <- lapply(PREDS, function(p) unique(quantile(df[[p]], seq(0,1,length.out=41))))
 names(grids) <- PREDS
 
@@ -445,7 +479,6 @@ write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
 # =============================================================================
 # Fit and test the model under different resolution and select the best pooled out-of-fold R²
 if (run_sec("resolution") || run_sec("transform")) local({
-NSEED <- as.integer(Sys.getenv("M1_CV_SEEDS", unset="5"))
 cvfit <- function(d, b) fit_es(d, b, best)
 agg <- function(A){ if (A==1) return(df0)
   df0 |> mutate(R=floor((90-latitude)/(0.1*A)), C=floor((longitude+180)/(0.1*A))) |>
@@ -501,14 +534,6 @@ ABS <- paths$abs_richness; REL <- paths$rel_richness; RANGES <- paths$spiny_rang
 NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season decid.", dry_mean="Dry-season decid.",
           height="Vegetation height", mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
 ALE_ORDER <- c("mammal_richness","consumption","vpi_mean","height","cold_mean","dry_mean")
-# 300, not 100: the envelope is a 2.5/97.5 percentile, so 100 replicates leave only ~2.5
-# draws in each tail. 300 gives ~7.5, comparable to the block bootstrap at NB=500.
-NREP <- as.integer(Sys.getenv("M1_DROP_REPS", unset="300"))
-# Only the fraction the manuscript reports. The 10% and 20% runs cost two thirds of this
-# section and fed nothing beyond a mean and SD, so the budget goes to more replicates at
-# the fraction that is actually plotted and quoted.
-FRACS <- as.numeric(strsplit(Sys.getenv("M1_DROP_FRACS", unset="0.3"), ",")[[1]])
-ALE_FRAC <- .3            # ALE is evaluated only for the most severe deletion scenario
 
 # makes sure all rasters match, reconstruct richness, get cell coordiantes and precitors, and converts range into presence raster cells
 rr <- rast(REL); tmpl <- rr

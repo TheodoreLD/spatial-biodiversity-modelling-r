@@ -45,12 +45,7 @@ ENV_STACKS <- c(vpi  = "vpi_stack.nc",
 # =============================================================================
 # 2. HELPERS
 # =============================================================================
-# The clamp is the guard, and it is stronger than a fill-value test. project() introduces
-# ~267,000 cells of -2.7e37 per layer where a bilinear window touches the source NA mask,
-# but it also leaves ~68,000 cells of dry_mean finite yet outside [0, 20.5] -- a fill value
-# averaged against real neighbours. Testing for 1e30 would pass those straight through;
-# clamping to the source's own range catches both. near is exempt because it copies source
-# values rather than combining them, so it can only return values the source already holds.
+
 align_to_template <- function(x, template, method = "bilinear") {
   out <- terra::project(x, template, method = method)
   if (method != "near") {
@@ -64,9 +59,6 @@ align_to_template <- function(x, template, method = "bilinear") {
   out
 }
 
-# na.rm=TRUE means a cell backed by one valid layer is averaged the same as one backed by
-# all of them. The coverage is reported rather than silently assumed even; a minimum-layer
-# rule would change the predictor values, so that stays a deliberate choice, not a default.
 report_coverage <- function(x, nm){
   n <- sum(!is.na(x))
   q <- terra::global(n, c("min","mean"), na.rm = TRUE)
@@ -145,13 +137,7 @@ names(trunk_richness) <- "trunkrichness"
 # =============================================================================
 # 4. ENVIRONMENT — productivity and deciduousness, reduced to per-cell means
 # =============================================================================
-# DO NOT fold these four into a helper that opens each file just before aligning it. All
-# four sources are opened FIRST, then aligned one at a time, and that ordering is load-
-# bearing: terra decides whether a raster lives in memory or is file-backed according to
-# memory pressure, and project()'s handling of the source NA mask differs between the two.
-# Opening them lazily instead moved 5,134 cells of dry_mean and 2,291 of cold_mean --
-# always at coverage edges, the same signature as the fill-strip bug ENVIRONMENT.md
-# describes. The duplication below is the price of a reproducible stack.
+
 vpi_stack  <- terra::rast(require_file(file.path(paths$env_preds_dir, ENV_STACKS[["vpi"]]),  "VPI stack"))
 cold_stack <- terra::rast(require_file(file.path(paths$env_preds_dir, ENV_STACKS[["cold"]]), "cold-season deciduousness stack"))
 dry_stack  <- terra::rast(require_file(file.path(paths$env_preds_dir, ENV_STACKS[["dry"]]),  "dry-season deciduousness stack"))
@@ -184,8 +170,6 @@ clade_stack <- build_clade_richness_stack(
 )
 terra::writeRaster(clade_stack, paths$clade_stack, overwrite = TRUE)
 
-# Model 1's mammal_richness is the sum of the same clade layers Model 2 uses, so the two
-# models cannot drift apart. A cell backed by no clade layer at all stays NA rather than 0.
 valid_clades <- sum(!is.na(clade_stack))
 mammal_richness <- sum(clade_stack, na.rm = TRUE)
 mammal_richness[valid_clades == 0] <- NA
