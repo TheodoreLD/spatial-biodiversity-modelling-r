@@ -54,9 +54,17 @@ interpolation of counts invents non-integer richness at every cell it touches.
 ## Reproducibility notes
 
 - Steps 1-3 are deterministic and reproduce byte-identical outputs.
+- **Step 5 is too**: two consecutive full runs of `05_model1.R` on one stack produced all
+  20 outputs byte-identical, PNGs included, and reading plus aggregating the stack agrees
+  to 17 significant figures across separate R sessions. Model 1 is bit-reproducible given
+  its input.
 - **Step 4 is not.** Running `04_data_preparation.R` twice on the same machine, same R,
-  same inputs, produces predictor stacks that differ: in one back-to-back pair `cold_mean`
-  differed in 3,632 cells (max 0.035) while every other layer was identical. Across runs it
+  same inputs, produces predictor stacks that differ. Confirmed by checksumming the
+  in-memory `predictor_stack` in the session that built it, so no file is written or read
+  in between and no sync race can explain it: across one pair `dry_mean` differed by 7,449
+  NA cells and 2,382 in its sum, while `trunkrichness`, `cold_mean`, `height`,
+  `mammal_richness` and `consumption` were identical. In another pair it was `cold_mean`
+  that moved, by 3,632 cells. Across runs it
   is a different vegetation layer each time (`vpi_mean`, `cold_mean` or `dry_mean`), always
   at coverage edges, and the affected layer gains or loses a few thousand NA cells. The
   cause is the same terra behaviour documented above: `project()` treats the source NA mask
@@ -72,6 +80,11 @@ interpolation of counts invents non-integer richness at every cell it touches.
   archive cannot promise a byte-identical `predictor_stack.tif`. Use the Dryad copy if you
   need to reproduce the exact numbers in the README. Forcing `terraOptions(todisk = TRUE)`
   before step 4 would likely pin the behaviour to one branch; this has not been tested.
+- A separate hazard, worth knowing if you work in a synced folder: this project lives under
+  OneDrive, and a 48 MB `predictor_stack.tif` read while a sync is still in flight yields a
+  run that does not reproduce. One Model 1 run was lost that way before three later sessions
+  agreed with each other. Let the sync settle before starting step 5, or work outside the
+  synced tree.
 - Models 1 and 2 seed every resampling step, so reruns reproduce within floating point.
 - CatBoost is not on CRAN; install the release binary matching the version above.
 - The 1 deg cell count depends on the terra version through NA-boundary handling
