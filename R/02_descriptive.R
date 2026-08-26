@@ -120,6 +120,15 @@ NB_ECO <- 2000
 MIN_EFF_CI <- 3
 MIN_ECO_CELLS <- 10
 
+# Kernel width for the biome densities, as a fraction of the robust SD (IQR/1.349) of the
+# biome being drawn. Deliberately NOT bw.nrd0: its n^(-1/5) term would smooth the
+# 155,544-cell biome about six times harder than the 421-cell one, so apparent smoothness
+# would track cell count rather than spread. A fixed fraction keeps the curves comparable.
+# Structure finer than this width is not interpretable: under bw.nrd0 every biome looks
+# multimodal, and none of those modes survives wider smoothing.
+BW_FRAC  <- 0.30
+RIDGE_H  <- 0.92   # peak height of a ridge in row units (below 1 keeps rows from touching)
+
 # randomly resamples all elements of x with replacement, preserving duplicates for bootstrap analysis.
 boot_resample <- function(x) x[sample.int(length(x), length(x), replace=TRUE)]
 
@@ -253,9 +262,21 @@ summarise_cond <- function(relfile, tag){
       tibble(mean=wmean(.x), 
              q25=wquantile(.x$rel, .x$w, .25), q75=wquantile(.x$rel, .x$w, .75), # Area-weighted cell-level interquartile
              cell_median=wquantile(.x$rel, .x$w, .50),
+             hi=wquantile(.x$rel, .x$w, .995),   # right end of the density for this biome
              n_cells=nrow(.x), n_eco=n_distinct(.x$ECO_ID),
              eff_eco=kish(tapply(.x$w, .x$ECO_ID, sum))) }) |> # Effective number of ecoregions after accounting for unequal areas
-    ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME)
+    ungroup() |> arrange(desc(mean)) |> rename(biome=BIOME_NAME) |>
+    mutate(rsd=(q75-q25)/1.349)   # robust SD: the scale the kernel width is set from
+
+  # Area-weighted density of the CELL distribution, one curve per biome. Each is truncated
+  # at its own 99.5th percentile so no curve is cut off by a limit set by another biome,
+  # and normalised to equal PEAK height: cell counts span 369x, so equal area would leave
+  # the smallest biome invisible. The count travels with each row instead.
+  dens <- do.call(rbind, lapply(seq_len(nrow(bio)), function(i){
+    z <- d[d$BIOME_NAME == bio$biome[i], ]
+    dn <- density(z$rel, weights = z$w/sum(z$w), bw = bio$rsd[i]*BW_FRAC,
+                  from = 0, to = bio$hi[i], n = 512)
+    data.frame(biome = bio$biome[i], x = dn$x, y = dn$y/max(dn$y)) }))
   # Ecoregion summaries
   ec <- d |> group_by(ECO_ID) |> filter(n()>=MIN_ECO_CELLS) |> group_modify(~{
       bb <- boot_wmean(.x$rel, .x$w, .x$blk, nb=NB_ECO, seed=.y$ECO_ID%%9999) # Spatial block-bootstrap distribution of the area-weighted mean
@@ -290,7 +311,7 @@ summarise_cond <- function(relfile, tag){
 
   write_csv(bio, file.path(outdir, sprintf("biome_summary_%s.csv", tag)))
   write_csv(ec, file.path(outdir, sprintf("ecoregion_summary_%s.csv", tag)))
-  list(bio=bio, ec=ec)
+  list(bio=bio, ec=ec, dens=dens)
 }
 
 message("biome/ecoregion distributions (block bootstrap)")
@@ -301,13 +322,13 @@ S <- list(total=summarise_cond("Relative_Richness_Tot.tif","total"),
 
 # ---- biome & ecoregion figures + composite -----------------------------------
 message("figures + composite")
-XLAB_B <- expression("Mean relative richness ("%*%10^-3*")")
+XLAB_B <- expression("Relative richness ("%*%10^-3*")")
 XLAB_E <- expression("Mean relative richness ("%*%10^-3*", 95% CI)")
-CAP_B  <- paste("Restricted to cells holding at least one spiny-trunk species.",
-                "point = area-weighted biome mean;\ntick = area-weighted median cell;",
-                "bar = area-weighted interquartile range across cells.\nThe bar is the",
-                "spread of richness within the biome, not a confidence interval: every",
-                "cell is measured, so there is no sampling error to estimate here.")
+CAP_B  <- paste0("Restricted to cells holding at least one spiny-trunk species. Area-weighted density of\n",
+                 "the cell distribution, truncated at the 99.5th percentile of each biome and scaled to equal\n",
+                 "peak height; cell count at right.  Diamond = area-weighted mean;  tick = area-weighted median.\n",
+                 "Bandwidth = ", BW_FRAC, " x IQR/1.349 within each biome, so all biomes are smoothed at the same\n",
+                 "fraction of their own spread rather than by cell count. The curves show shape, not fine structure.")
 # %.0f, not %d: ceiling() returns a double and sprintf("%d", 2.0) is an error in R.
 CAP_E  <- sprintf(paste("Restricted to cells holding at least one spiny-trunk species.",
                         "point = area-weighted mean;\nbar = 95%% block-bootstrap CI over %.0f-deg blocks;",
@@ -315,16 +336,28 @@ CAP_E  <- sprintf(paste("Restricted to cells holding at least one spiny-trunk sp
                         "blocks, too few for a percentile bootstrap, so no interval is reported."),
                   BLOCK_ECO, MIN_EFF_CI)
 
-mk_biome <- function(bio, keyed) { bio$biome <- factor(bio$biome, levels=rev(bio$biome))
-  ggplot(bio, aes(mean, biome)) +
-    geom_errorbar(aes(xmin=q25,xmax=q75), orientation="y", width=0, colour="grey65", linewidth=.5) +
-    geom_point(aes(x=cell_median), shape=124, size=2.8, colour="grey40") +
-    geom_point(aes(colour=biome), size=3.1) +
-    scale_colour_manual(values=sapply(levels(bio$biome), bcol_keyed, keyed=keyed), guide="none") +
-    scale_y_discrete(labels=function(b) blab(as.character(b))) +
-    scale_x_continuous(labels=label_number(scale=1e3)) +
+# Ridgeline of the weighted cell densities. Rows keep the descending-mean order of the
+# biome table, and biomes absent from panel C stay grey, so B and C read as one figure.
+mk_biome <- function(bio, dens, keyed) {
+  bio$pos  <- match(bio$biome, rev(bio$biome))
+  dens$pos <- bio$pos[match(dens$biome, bio$biome)]
+  xmax <- max(bio$hi)*1.02
+  ggplot() +
+    geom_ribbon(data=dens, aes(x=x, ymin=pos, ymax=pos + y*RIDGE_H, fill=biome, group=pos),
+                colour="grey25", linewidth=.22, alpha=.82) +
+    geom_segment(data=bio, aes(x=cell_median, xend=cell_median, y=pos, yend=pos+.33),
+                 colour="grey15", linewidth=.65) +
+    geom_point(data=bio, aes(x=mean, y=pos), shape=18, size=2.9, colour="grey10") +
+    geom_text(data=bio, aes(x=xmax, y=pos+.30, label=format(n_cells, big.mark=",")),
+              hjust=1, size=2.5, colour="grey45") +
+    scale_fill_manual(values=sapply(bio$biome, bcol_keyed, keyed=keyed), guide="none") +
+    scale_y_continuous(breaks=bio$pos, labels=blab(bio$biome), expand=expansion(add=c(.1,1.05))) +
+    scale_x_continuous(labels=label_number(scale=1e3), limits=c(0,xmax),
+                       expand=expansion(mult=c(.01,.02))) +
     labs(x=XLAB_B, y=NULL, caption=CAP_B) +
     theme(axis.text.y=element_text(size=9),
+          panel.grid.major.x=element_line(colour="grey92", linewidth=.3),
+          axis.line.x=element_line(colour="grey30"),
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
 
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
@@ -347,24 +380,26 @@ CLAB <- c(total="spiny", prickly="prickly", thorny="thorny")
 RELF <- c(total="Relative_Richness_Tot.tif", prickly="Relative_Richness_Prickly.tif",
           thorny="Relative_Richness_Thorny.tif")
 for (cond in names(S)){
-  bio <- S[[cond]]$bio; ec <- S[[cond]]$ec
+  bio <- S[[cond]]$bio; ec <- S[[cond]]$ec; dens <- S[[cond]]$dens
   keyed <- unique(head(ec,25)$BIOME_NAME)
   miss <- setdiff(unique(c(bio$biome, keyed)), names(BCOL))
   if (length(miss)) warning(cond, ": no colour assigned for ", paste(miss, collapse="; "), call.=FALSE)
   ggsave(file.path(outdir,sprintf("FIG_biome_%s.png",cond)),
-         mk_biome(bio, keyed) + labs(title=sprintf("Relative %s-trunk richness by biome", CLAB[[cond]])),
-         width=10, height=6, dpi=170)
+         mk_biome(bio, dens, keyed) + labs(title=sprintf("Relative %s-trunk richness by biome", CLAB[[cond]])),
+         width=9.4, height=6.8, dpi=170)
   ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)),
          mk_eco(ec, legend=TRUE) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness", CLAB[[cond]])),
          width=11, height=9, dpi=170)
   pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (0.1°)", CLAB[[cond]]),
                expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
-  pb <- mk_biome(bio, keyed) + labs(title="B)  By biome")
+  pb <- mk_biome(bio, dens, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
  
-  comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.15))) +
-          plot_layout(heights=c(1.12,1.03))
+  # The ridgeline needs more vertical room than the point-and-bar panel it replaced, so the
+  # second row takes more of the height and the whole figure is taller.
+  comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.12))) +
+          plot_layout(heights=c(0.95,1.32))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,
-         width=15, height=13.0, dpi=170, bg="white")
+         width=15.5, height=15.0, dpi=170, bg="white")
 }
 message("DONE -> ", outdir)
