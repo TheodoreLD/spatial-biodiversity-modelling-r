@@ -54,6 +54,20 @@ interpolation of counts invents non-integer richness at every cell it touches.
 ## Reproducibility notes
 
 - Steps 1-3 are deterministic and reproduce byte-identical outputs.
+- **Step 4 is not.** Running `04_data_preparation.R` twice on the same machine, same R,
+  same inputs, produces predictor stacks that differ: in one back-to-back pair `cold_mean`
+  differed in 3,632 cells (max 0.035) while every other layer was identical. Across runs it
+  is a different vegetation layer each time (`vpi_mean`, `cold_mean` or `dry_mean`), always
+  at coverage edges, and the affected layer gains or loses a few thousand NA cells. The
+  cause is the same terra behaviour documented above: `project()` treats the source NA mask
+  differently depending on whether the raster is held in memory or file-backed, and terra
+  makes that choice from free memory at run time. `trunkrichness`, `height`,
+  `mammal_richness`, `consumption` and the whole clade stack are stable.
+  Consequence: rebuilding the stack moves Model 1's pooled OOF R2 by ~0.004, well inside
+  the 0.025 spread across fold allocations, so no conclusion depends on it -- but the
+  archive cannot promise a byte-identical `predictor_stack.tif`. Use the Dryad copy if you
+  need to reproduce the exact numbers in the README. Forcing `terraOptions(todisk = TRUE)`
+  before step 4 would likely pin the behaviour to one branch; this has not been tested.
 - Models 1 and 2 seed every resampling step, so reruns reproduce within floating point.
 - CatBoost is not on CRAN; install the release binary matching the version above.
 - The 1 deg cell count depends on the terra version through NA-boundary handling

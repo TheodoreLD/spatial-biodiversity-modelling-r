@@ -33,8 +33,7 @@ create_project_dirs()
 MASS_MIN_G     <- 5000
 EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
 
-# The ecoregion ranking is taken from the TOTAL condition, not prickly or thorny: the
-# question is which ecoregion is richest in spiny-trunk trees overall.
+# The ecoregion ranking is taken from the TOTAL condition
 RANKING_COND <- "total"
 
 
@@ -54,8 +53,6 @@ ranking_path    <- require_file(
 # =============================================================================
 
 # Only the Neotropic/Nearctic, Afrotropic and Indomalayan realms map to a modelled region.
-# Palearctic, Australasian, Oceanian and Antarctic ecoregions are outside the study design
-# and fall out as NA, which section 5 then filters away.
 realm_to_continent <- function(r) {
   r <- tolower(as.character(r))
   ifelse(grepl("neotrop|nearctic", r), "Americas",
@@ -102,16 +99,12 @@ ranked <- read_csv(ranking_path, show_col_types = FALSE) |>
   mutate(continent = realm_to_continent(REALM)) |>
   filter(!is.na(continent))
 
-# The leader is picked on the point estimate alone. The >=10-cell floor is already applied
-# by 02, but the bootstrap interval in the same file is not consulted, so where the top two
-# ecoregions overlap this choice is not resolved by the data.
+# The leader is picked on the point estimate alone.
 leaders <- ranked |> group_by(continent) |> slice_max(mean, n = 1, with_ties = FALSE) |>
   ungroup() |> mutate(basis = "highest mean")
 
 # Where the leader holds too few effective blocks for 02 to report an interval, the species
-# list would rest on an estimate the descriptive step itself declines to bound. Report the
-# best CI-backed ecoregion of that continent alongside it rather than silently substituting
-# one for the other -- both lists go into the output, distinguished by `basis`.
+# list would rest on an estimate the descriptive step itself declines to bound.
 backups <- ranked |> filter(continent %in% leaders$continent[is.na(leaders$lo)],
                             !is.na(lo), !ECO_ID %in% leaders$ECO_ID) |>
   group_by(continent) |> slice_max(mean, n = 1, with_ties = FALSE) |>
@@ -147,9 +140,7 @@ selected_ecos <- eco |>
 # 6. SPECIES LISTS — which of the pool occurs in each target ecoregion
 # =============================================================================
 
-# Align the polygons to the species rasters rather than the other way round, and refuse to
-# proceed if the rasters disagree among themselves: a single odd CRS would silently produce
-# an empty species list for every ecoregion.
+# Align the polygons to the species rasters
 crs_ref <- crs(rast(traits$raster_path[1]))
 odd <- traits$raster_path[!vapply(traits$raster_path,
                                   function(p) identical(crs(rast(p)), crs_ref), logical(1))]
@@ -158,9 +149,6 @@ if (length(odd))
        basename(traits$raster_path[1]), ", e.g. ", basename(odd[1]), call. = FALSE)
 selected_ecos <- st_transform(selected_ecos, crs = crs_ref)
 
-# The reliability of the underlying richness estimate travels with every species row, so a
-# list drawn from a 1.4-effective-block ecoregion cannot be read as if it were drawn from a
-# well-replicated one.
 ecoregion_species <- map_dfr(seq_len(nrow(selected_ecos)), function(i) {
   poly  <- selected_ecos[i, ]
   flags <- map_lgl(traits$raster_path, present_in_poly, poly_sf = poly)
@@ -180,7 +168,7 @@ write_csv(ecoregion_unnested, file.path(paths$ecoregion_mammal, "ecoregion_mamma
 
 
 # =============================================================================
-# 7. ORDER COUNTS — the same lists collapsed to taxonomic orders
+# 7. ORDER COUNTS 
 # =============================================================================
 region_order_counts <- ecoregion_unnested |>
   distinct(Continent, Ecoregion, Basis, Species) |>
