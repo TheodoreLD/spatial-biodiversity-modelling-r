@@ -63,6 +63,10 @@ interpolation of counts invents non-integer richness at every cell it touches.
   differently depending on whether the raster is held in memory or file-backed, and terra
   makes that choice from free memory at run time. `trunkrichness`, `height`,
   `mammal_richness`, `consumption` and the whole clade stack are stable.
+  The instability has two scales. Two `project()` calls on the same object in the same
+  session differ in the last float32 bit (max 5.96e-08 = 2^-24) in a few dozen cells; that
+  is always present and harmless. Separately, and less often, one layer shifts its NA
+  boundary by a few thousand cells, which is the effect that matters.
   Consequence: rebuilding the stack moves Model 1's pooled OOF R2 by ~0.004, well inside
   the 0.025 spread across fold allocations, so no conclusion depends on it -- but the
   archive cannot promise a byte-identical `predictor_stack.tif`. Use the Dryad copy if you

@@ -12,9 +12,6 @@
 #   5  megafauna      clade richness stack, total richness, consumption
 #   6  assemble       stack, validate against fill values, write raster + table
 #
-# Read the terra note in ENVIRONMENT.md before touching align_to_template: the fill strip
-# and the range clamp both exist because terra >= 1.8 emits ~ -2.7e37 rather than NA where
-# a bilinear window touches the source NA mask.
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -31,14 +28,12 @@ create_project_dirs()
 # 1. SETTINGS
 # =============================================================================
 
-# What counts as a large herbivore. Must match 03_mammal_ecoregions.R: the two scripts
-# define this pool independently, so a change here needs the same change there.
+# What counts as a large herbivore. 
 MASS_MIN_G     <- 5000
 EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
 
-# Anything beyond this magnitude is a fill value, not data. Used both by the strip inside
-# align_to_template and by the final check on the assembled stack, so the guard and the
-# test it is verified against cannot drift apart.
+# Anything beyond this magnitude is a fill value, not data. Used once, by the check in
+# section 6 that refuses to write a stack the clamp failed to clean.
 FILL_LIMIT <- 1e30
 
 # Multi-layer environmental stacks, each reduced to a per-cell mean over its layers.
@@ -50,9 +45,13 @@ ENV_STACKS <- c(vpi  = "vpi_stack.nc",
 # =============================================================================
 # 2. HELPERS
 # =============================================================================
+# The clamp is the guard, and it is stronger than a fill-value test. project() introduces
+# ~267,000 cells of -2.7e37 per layer where a bilinear window touches the source NA mask,
+# but it also leaves ~68,000 cells of dry_mean finite yet outside [0, 20.5] -- a fill value
+# averaged against real neighbours. Testing for 1e30 would pass those straight through;
+# clamping to the source's own range catches both. near is exempt because it copies source
+# values rather than combining them, so it can only return values the source already holds.
 align_to_template <- function(x, template, method = "bilinear") {
-  if (any(abs(unlist(terra::global(x, c("min", "max"), na.rm = TRUE))) > FILL_LIMIT, na.rm = TRUE))
-    x[abs(x) > FILL_LIMIT] <- NA
   out <- terra::project(x, template, method = method)
   if (method != "near") {
     g <- suppressWarnings(terra::global(x, c("min", "max"), na.rm = TRUE))
