@@ -614,7 +614,8 @@ ggsave(file.path(outdir,"M1_jackknife_ALE.png"),
     title=sprintf("Model 1 species-drop sensitivity: ALE stability when %d%% of species are removed (blue = all %d species)",
                   as.integer(ALE_FRAC*100), nsp),
     subtitle=sprintf("Envelope = 2.5-97.5%% of %d random-deletion replicates; response rescaled by the retention fraction so amplitudes are comparable", NREP)) +
-    theme_minimal(base_size=10) + theme(plot.title=element_text(face="bold",size=11),
+    theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
+    plot.title=element_text(face="bold",size=11),
     plot.subtitle=element_text(size=8.5, colour="grey30"), axis.line=element_line(colour="grey30")),
   width=13, height=7, dpi=175)
 

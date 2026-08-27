@@ -381,7 +381,6 @@ mk_biome <- function(bio, dens, keyed) {
                        expand=expansion(mult=c(.01,.02))) +
     labs(x=XLAB_B, y=NULL, caption=CAP_B) +
     theme(axis.text.y=element_text(size=9),
-          panel.grid.major.x=element_line(colour="grey92", linewidth=.3),
           axis.line.x=element_line(colour="grey30"),
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
 
