@@ -679,15 +679,19 @@ at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
 ggsave(file.path(outdir,"M1_ALE.png"),
   ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
     geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
-    # free_x only: all six ALEs are in the same response units, so freeing y as well would
-    # make a weak predictor look as strong as a strong one.
-    facet_wrap(~predictor, scales="free_x", ncol=2) +
+    # Free y as well as x. All six ALEs share response units, so a common y would let the
+    # panels be compared for effect size -- but this model is read for response SHAPE, not
+    # for which predictor matters most (see the README method note), and a common scale
+    # flattens the weaker curves until their shape is unreadable. The caption says the
+    # scales are independent so nobody compares heights across panels.
+    facet_wrap(~predictor, scales="free", ncol=2) +
     scale_y_continuous(labels=scales::label_number(scale=1e3)) +
     labs(x=NULL, y=expression("ALE ("%*%10^-3*")"),
          title="Model 1 ALE with 95% pointwise block-bootstrap percentile interval",
          subtitle=paste0("Band = 2.5-97.5% across ", NB, " block-bootstrap refits, taken separately at each x ",
                          "(pointwise, not a simultaneous band).\nThe line is the single full-data fit, so it is ",
-                         "not the centre of the band by construction. Rows: megafauna, vegetation, seasonality.")) +
+                         "not the centre of the band by construction.\nEach panel has its own y scale: read the ",
+                         "shapes, not the relative heights. Rows: megafauna, vegetation, seasonality.")) +
     theme(plot.subtitle=element_text(size=9, colour="grey35"),
           strip.text=element_text(face="bold", size=10)),
   width=7.5, height=9, dpi=300)
