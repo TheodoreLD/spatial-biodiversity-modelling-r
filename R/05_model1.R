@@ -1,5 +1,5 @@
 # =============================================================================
-# 05_model1.R - Model 1 in full
+# 05_model1.R 
 #
 # GOAL: characterise the environmental conditions where spiny-trunk richness is high,
 # via ALE response shapes.
@@ -50,21 +50,18 @@ AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
 
 # ---- repetition counts ----
 # Every estimate that depends on a random draw is averaged over several of them, so these
-# are the runtime levers. Raising one costs time; lowering it costs precision in a tail.
+# are the runtime levers.
 NBLK  <- as.integer(Sys.getenv("M1_BLOCK_REPS", unset = "5"))    # correlogram: allocations x subsamples
 NCV   <- as.integer(Sys.getenv("M1_CV_REPS",    unset = "10"))   # performance: fold allocations
 NSEED <- as.integer(Sys.getenv("M1_CV_SEEDS",   unset = "5"))    # resolution + transform: allocations
-# 200 leaves only ~5 draws in each 2.5% tail; 500 gives ~12. Each replicate now costs two
-# fits (early stopping, then refit), so this is the main runtime lever for section 6.
+# 500 gives ~12 draws in each 2.5% tail. Each replicate costs two
+# fits (early stopping, then refit).
 NB    <- as.integer(Sys.getenv("M1_BOOT",       unset = "500"))
-# 300, not 100: the envelope is a 2.5/97.5 percentile, so 100 replicates leave only ~2.5
-# draws in each tail. 300 gives ~7.5, comparable to the block bootstrap at NB=500.
+# 300: the envelope is a 2.5/97.5 percentile, gives ~7.5 draws in each tail.
 NREP  <- as.integer(Sys.getenv("M1_DROP_REPS",  unset = "300"))
-# Only the fraction the manuscript reports. The 10% and 20% runs cost two thirds of this
-# section and fed nothing beyond a mean and SD, so the budget goes to more replicates at
-# the fraction that is actually plotted and quoted.
+# 30% of the fraction removed.
 FRACS    <- as.numeric(strsplit(Sys.getenv("M1_DROP_FRACS", unset = "0.3"), ",")[[1]])
-ALE_FRAC <- .3            # ALE is evaluated only for the most severe deletion scenario
+ALE_FRAC <- .3            
 
 # ---- what is modelled ----
 ENV <- c("vpi_mean","cold_mean","dry_mean","height")
@@ -76,19 +73,14 @@ NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
 
 # ---- CatBoost ----
 # shared CatBoost settings: RMSE loss, 0.8 row/feature subsampling, silent
-# random_seed and thread_count pinned so the archive is bit-reproducible: CatBoost defaults
-# thread_count to all cores, and the float reduction order varies with it.
+# random_seed and thread_count pinned.
 BASE <- list(loss_function = "RMSE", rsm = 0.8, subsample = 0.8,
              random_seed = 1, thread_count = 4,
              allow_writing_files = FALSE, logging_level = "Silent")
-PRELIM <- list(depth=6, learning_rate=.05, l2_leaf_reg=3)  # section 1 only, before tuning
+PRELIM <- list(depth=6, learning_rate=.05, l2_leaf_reg=3)  
 
-# Ceiling on boosting iterations, so early stopping SELECTS the tree count rather than
-# hitting a cap. At 1000 the tuned model returned 999 -- one below the limit, i.e. the
-# validation loss was still improving and the count was capped, not chosen. Raising the
-# ceiling shows the true optimum is 1022, and 3000 and 10000 both stop there, so 3000 is
-# ample. It costs almost nothing: od_wait = 50 means training halts ~50 iterations past
-# the optimum, not at the ceiling.
+# Ceiling on boosting iterations, so early stopping selects the tree count rather than
+# hitting a cap. 
 MAX_TREES <- as.integer(Sys.getenv("M1_MAX_TREES", unset = "3000"))
 
 
@@ -134,30 +126,20 @@ pool <- function(d, lab = NULL, preds = PREDS) {
 pr <- function(m, d) catboost::catboost.predict(m, pool(d))
 
 # ---- ALE ----
-# Defined here, not inside section 6: the species-drop analysis uses it too, so a run with
-# M1_RUN="core,drop" must still have it.
 .empty_bins <- 0L
 ale_curve <- function(m, d, p, q){
   bi  <- pmin(pmax(findInterval(d[[p]], q[-c(1,length(q))]), 0), length(q)-2)
   eff <- numeric(length(q)-1)
   for (k in seq_len(length(q)-1)){ mm <- bi==(k-1)
-    # an empty interval keeps eff = 0, i.e. "no effect" standing in for "no data"; counted
-    # rather than assumed rare, since the grid comes from the full sample but the bins are
-    # evaluated on a block resample
     if (!any(mm)) { .empty_bins <<- .empty_bins + 1L; next }
     dl <- d[mm,]; du <- d[mm,]; dl[[p]] <- q[k]; du[[p]] <- q[k+1]
     eff[k] <- mean(pr(m,du) - pr(m,dl)) }
   a <- c(0, cumsum(eff))
-  # empirical ALE centring: the uncentred estimate is a STEP function taking a[k+1] on
-  # interval k, so the centre is its mean over the observations (a[bi+2] is each cell's own
-  # interval value). A midpoint centre assumes piecewise linearity within bins; the two
-  # differ by a constant shift, but only this one is the estimator as defined.
   a - mean(a[bi + 2])
 }
 
 # create a validation set (20%) to detect when CatBoost is overfitting and should
 # stop training. 
-# randomly select about 20% of unique groups
 eval_mask <- function(b, seed = 0){
   set.seed(seed); u <- unique(b)
   b %in% sample(u, max(1, floor(.2*length(u))))
@@ -175,17 +157,6 @@ fit_es <- function(d, b, par, seed = 0, target = TARGET){
                                od_wait = 50, use_best_model = TRUE)))
 }
 
-# Early stopping picks the tree count, then the model is REFITTED on all of `d`. Used by
-# section 4 (performance), section 5 (the confirmatory CV) and section 6 (the ALE point
-# estimate and every bootstrap replicate), so the reported R2 and the reported response
-# shapes describe one estimator.
-#
-# Sections 7-9 deliberately use fit_es instead. Their comparisons are internal -- across
-# resolutions, across transforms, across species subsets -- each fit costs half as much,
-# and consistency within a sweep matters more there than matching section 4. The
-# consequence is that their R2 values are NOT on the same scale as pooled_oof_r2: section
-# 9's full-pool baseline is a fit_es estimate and sits above the headline number for that
-# reason, not because dropping species helps.
 fit_final <- function(d, b, par, seed = 0){
   mes <- fit_es(d, b, par, seed)
   nt  <- tryCatch(mes$tree_count, error = function(e) NULL)
@@ -254,8 +225,6 @@ bins <- seq(0,3000,150); mids <- (bins[-1]+bins[-length(bins)])/2 # define the d
 
 # calculate resiudal spatial autocorrelation (Moran-like): compare the model residuals of cells sperated
 # by a given distance. Do resiudals within bin tend to be sililar?
-# outer(z,z) is 2500^2 doubles; building it once per call rather than once per distance
-# bin cuts this from 20 allocations to 1.
 correlogram <- function(z, D, bins){
   P <- outer(z, z)
   sapply(seq_len(length(bins)-1), function(k){
@@ -393,9 +362,16 @@ message(sprintf("  archive: mean-of-folds %.3f (SD %.3f)", mean(fr), sd(fr)))
 message("5. DIAGNOSTICS")
 # check final out-of-fold residuals to determine if it is still spatially autocorrelated
 resid <- df[[TARGET]] - oof          # allocation 1, for the plotted panels
-# Correlogram and calibration averaged over ALL allocations rather than taken from
-# allocation 1: on this dataset allocation 1 is the least favourable of the ten (its pooled
-# R2 equals pooled_oof_r2_min exactly), so its diagnostics alone would understate the model.
+
+# ---- WHAT THE RESIDUALS STILL CARRY: spatial structure, and calibration -----------------
+# Two questions about the out-of-fold errors. Moran's I by distance: is there spatial signal
+# the model failed to capture, i.e. do nearby cells still err together? Calibration slope:
+# are the predictions on the right scale, or systematically compressed towards the mean?
+# (1.0 = correct scale, below 1 = under-dispersed.)
+#
+# Both are averaged over ALL allocations rather than taken from allocation 1: on this
+# dataset allocation 1 is the least favourable of the ten (its pooled R2 equals
+# pooled_oof_r2_min exactly), so its diagnostics alone would understate the model.
 Mr <- do.call(cbind, lapply(seq_len(NCV), function(rp){
   rr <- df[[TARGET]] - OOF[, rp]
   sapply(seq_len(NBLK), function(s){ set.seed(2000 + 100*rp + s); idx <- sample(nrow(df), NSUB)
@@ -415,10 +391,20 @@ message(sprintf("  calibration slope = %.3f (sd %.3f over %d allocations)",
                 mean(cal_v), sd(cal_v), NCV))
 message(sprintf("  residual Moran I (75km) = %.2f -> residual spatial dependence remains; uncertainty uses spatial resampling", mIr[1]))
 
-# The block is derived from residuals produced under 5 deg CV, but the FINAL model's own
-# residuals stay autocorrelated further out. The derivation is therefore self-limiting: it
-# can only return a block smaller than its own output would justify. One confirmatory CV at
-# the larger block settles whether that gap matters for the reported R2.
+# ---- DOES THE BLOCK SIZE CHANGE THE ANSWER? --------------------------------------------
+# BLOCK was derived in section 1 from residuals produced under 5 deg CV -- 5 being the floor
+# deg_from_km can return, so the derivation starts at the smallest block it will ever use.
+# That start biases it one way: narrow blocks put training cells close to test cells, the
+# model absorbs some of the local structure, and its residuals therefore look LESS
+# autocorrelated than they really are. So section 1 can only under-shoot.
+#
+# It returned 8 deg. The final model's own residuals (mIr, computed above under 8 deg CV)
+# imply 9 deg -- the predicted direction, and the size of the gap. Refit once at 9 deg to
+# see whether the reported R2 actually depends on the choice.
+#
+# Caveat when reading the output: this is ONE fold allocation, while `pooled` above is the
+# mean of NCV. The allocation spread at 8 deg is roughly 0.33-0.39, so a single draw at
+# 9 deg landing near 0.385 is not by itself evidence that the larger block scores better.
 rk2 <- cross_km(mIr); blk2 <- deg_from_km(rk2)
 if (blk2 > BLOCK) {
   b2 <- blk(df$longitude, df$latitude, blk2); fo2 <- folds_of(b2, 5, 101)
