@@ -45,7 +45,7 @@ woody-plant richness (partly controls for uneven botanical sampling).
 ## Method notes
 - **1° analysis unit** (aggregated from 0.1°): defensible *n* (4,806 cells) instead of
   ~399k pseudo-replicates from 74 species ranges. That is the reason for the choice; the
-  resolution sweep is a check, not the justification — it cannot separate 1° (0.363 ± 0.021)
+  resolution sweep is a check, not the justification — it cannot separate 1° (0.363 ± 0.022)
   from 2° (0.368 ± 0.013), and only rules out 0.1° (0.285 ± 0.021) firmly.
 - **Tuning does not discriminate.** All 12 configurations fall within one standard error of
   the minimum in every fold allocation, so the 1-SE rule returns the simplest corner of the

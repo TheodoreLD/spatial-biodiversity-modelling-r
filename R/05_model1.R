@@ -265,7 +265,7 @@ bid <- blk(df$longitude, df$latitude, BLOCK)
 # =============================================================================
 message("2. TUNING")
 # 1-SE rule: among configurations whose spatial-CV RMSE is within one standard error
-# of the best, take the SIMPLEST (shallowest, most regularised).
+# of the best, take the simplest (shallowest, most regularised).
 GRID <- unlist(lapply(c(3,4,6,8), function(dp) lapply(c(3,10,30), function(l2)
           list(depth=dp, learning_rate=.05, l2_leaf_reg=l2))), recursive=FALSE)
 fT <- folds_of(bid,5,1)
@@ -361,17 +361,9 @@ message(sprintf("  archive: mean-of-folds %.3f (SD %.3f)", mean(fr), sd(fr)))
 # =============================================================================
 message("5. DIAGNOSTICS")
 # check final out-of-fold residuals to determine if it is still spatially autocorrelated
-resid <- df[[TARGET]] - oof          # allocation 1, for the plotted panels
+resid <- df[[TARGET]] - oof          
 
-# ---- WHAT THE RESIDUALS STILL CARRY: spatial structure, and calibration -----------------
-# Two questions about the out-of-fold errors. Moran's I by distance: is there spatial signal
-# the model failed to capture, i.e. do nearby cells still err together? Calibration slope:
-# are the predictions on the right scale, or systematically compressed towards the mean?
-# (1.0 = correct scale, below 1 = under-dispersed.)
-#
-# Both are averaged over ALL allocations rather than taken from allocation 1: on this
-# dataset allocation 1 is the least favourable of the ten (its pooled R2 equals
-# pooled_oof_r2_min exactly), so its diagnostics alone would understate the model.
+# what the residuals still carry
 Mr <- do.call(cbind, lapply(seq_len(NCV), function(rp){
   rr <- df[[TARGET]] - OOF[, rp]
   sapply(seq_len(NBLK), function(s){ set.seed(2000 + 100*rp + s); idx <- sample(nrow(df), NSUB)
@@ -389,22 +381,10 @@ write_csv(data.frame(calibration_slope=mean(cal_v), calibration_slope_sd=sd(cal_
           file.path(outdir,"calibration.csv"))
 message(sprintf("  calibration slope = %.3f (sd %.3f over %d allocations)",
                 mean(cal_v), sd(cal_v), NCV))
+
 message(sprintf("  residual Moran I (75km) = %.2f -> residual spatial dependence remains; uncertainty uses spatial resampling", mIr[1]))
 
-# ---- DOES THE BLOCK SIZE CHANGE THE ANSWER? --------------------------------------------
-# BLOCK was derived in section 1 from residuals produced under 5 deg CV -- 5 being the floor
-# deg_from_km can return, so the derivation starts at the smallest block it will ever use.
-# That start biases it one way: narrow blocks put training cells close to test cells, the
-# model absorbs some of the local structure, and its residuals therefore look LESS
-# autocorrelated than they really are. So section 1 can only under-shoot.
-#
-# It returned 8 deg. The final model's own residuals (mIr, computed above under 8 deg CV)
-# imply 9 deg -- the predicted direction, and the size of the gap. Refit once at 9 deg to
-# see whether the reported R2 actually depends on the choice.
-#
-# Caveat when reading the output: this is ONE fold allocation, while `pooled` above is the
-# mean of NCV. The allocation spread at 8 deg is roughly 0.33-0.39, so a single draw at
-# 9 deg landing near 0.385 is not by itself evidence that the larger block scores better.
+# Does the block size change the anwser
 rk2 <- cross_km(mIr); blk2 <- deg_from_km(rk2)
 if (blk2 > BLOCK) {
   b2 <- blk(df$longitude, df$latitude, blk2); fo2 <- folds_of(b2, 5, 101)
@@ -425,7 +405,8 @@ if (blk2 > BLOCK) {
 }
 
 if (run_sec("ale")) {
-# =============================================================================
+
+  # =============================================================================
 # 6. BLOCK-BOOTSTRAP ENSEMBLE -> ALE CIs
 # =============================================================================
 message("6. ENSEMBLE (ALE CIs)")
@@ -458,17 +439,10 @@ for (b in 1:NB){
 }
   
 # use the bootstrap cruves to make the confidence interval
-# (NB bootstrap curves + 1 point estimate) per predictor, each over that predictor's own
-# number of intervals -- not a hardcoded 40, and not excluding the point-estimate calls.
 .n_bins <- (NB + 1L) * sum(vapply(grids, function(q) length(q) - 1L, integer(1)))
 message(sprintf("  empty ALE intervals: %d of %d (%.3f%%)",
                 .empty_bins, .n_bins, 100*.empty_bins/.n_bins))
-# An empty interval leaves eff = 0, which reads as "no effect" when it means "no data", and
-# because the curve is a cumsum that error propagates to every later point. It has never
-# fired here -- the grid is a quantile grid, so each interval holds ~120 cells drawn from
-# 11-53 distinct blocks, and the chance a bootstrap draw misses all of them is ~e^-11 at
-# worst. Warn rather than only counting, so a future grid or a coarser block cannot make
-# this silent.
+
 if (.empty_bins > 0)
   warning(sprintf(paste("%d ALE intervals were empty in some bootstrap replicate and were",
                         "accumulated as zero effect. The grid is too fine for the block",
@@ -485,6 +459,7 @@ ale_tab <- bind_rows(lapply(PREDS, function(p){
                  n_boot     = NB) }))
 write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
 
+
 }
 
 # =============================================================================
@@ -492,8 +467,7 @@ write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
 # =============================================================================
 # Fit and test the model under different resolution and select the best pooled out-of-fold R²
 if (run_sec("resolution") || run_sec("transform")) local({
-# fit_es, not fit_final: this sweep compares resolutions against each other, so one
-# consistent estimator matters more than matching section 4's absolute R2 (see fit_final).
+# fit_es: this sweep compares resolutions against each other
 cvfit <- function(d, b) fit_es(d, b, best)
 agg <- function(A){ if (A==1) return(df0)
   df0 |> mutate(R=floor((90-latitude)/(0.1*A)), C=floor((longitude+180)/(0.1*A))) |>
@@ -561,8 +535,7 @@ Pv <- values(ps[[PREDS]]); predfin <- rowSums(is.finite(Pv))==length(PREDS)
 n <- ncell(tmpl); nc <- ncol(tmpl); ev <- as.vector(ext(tmpl)); rs <- res(tmpl)
 col0 <- (seq_len(n)-1)%%nc; row0 <- (seq_len(n)-1)%/%nc
 lon <- ev[["xmin"]]+(col0+0.5)*rs[1]; lat <- ev[["ymax"]]-(row0+0.5)*rs[2]
-# NOT re-derived: the global AGG comes from MODEL1_AGG and defines the unit the model was
-# tuned at. Shadowing it here would pin this section to 1 deg while the model ran elsewhere.
+
 if (round(1/rs[1]) != AGG)
   stop(sprintf("species-drop aggregation (%d) disagrees with the model's AGG (%d)",
                round(1/rs[1]), AGG), call.=FALSE)
@@ -590,8 +563,7 @@ build <- function(keep){
   d <- data.frame(trunkrichness=rel[m], lon=lon[m], lat=lat[m], R=Rb[m], C=Cb[m]); d <- cbind(d, Pv[m,,drop=FALSE])
   d |> group_by(R,C) |> summarise(across(everything(), \(x) mean(x,na.rm=TRUE)), nn=n(), .groups="drop") |>
     filter(nn>=MINSUB) |> select(-nn) |> as.data.frame() }
-# fit_es, not fit_final: full pool and dropped pools are compared against each other, so
-# these R2 values are internally consistent but not on the pooled_oof_r2 scale.
+# fit_es: full pool and dropped pools are compared against each other
 fit <- function(d) fit_es(d, blk(d$lon, d$lat, BLOCK), best)
 cvr2 <- function(d){ b<-blk(d$lon,d$lat,BLOCK); fo<-folds_of(b); oof<-rep(NA_real_,nrow(d))
   for (f in 0:4){ tr<-fo!=f; te<-fo==f; if(sum(te)<10) next
@@ -665,11 +637,6 @@ at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
 ggsave(file.path(outdir,"M1_ALE.png"),
   ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
     geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
-    # Free y as well as x. All six ALEs share response units, so a common y would let the
-    # panels be compared for effect size -- but this model is read for response SHAPE, not
-    # for which predictor matters most (see the README method note), and a common scale
-    # flattens the weaker curves until their shape is unreadable. The caption says the
-    # scales are independent so nobody compares heights across panels.
     facet_wrap(~predictor, scales="free", ncol=2) +
     scale_y_continuous(labels=scales::label_number(scale=1e3)) +
     labs(x=NULL, y=expression("ALE ("%*%10^-3*")"),
