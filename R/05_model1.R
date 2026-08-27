@@ -25,7 +25,7 @@
 # Repetition counts (env vars): M1_CV_REPS (10) performance allocations, M1_BLOCK_REPS (5)
 # correlogram allocations/subsamples, M1_CV_SEEDS (5) resolution + transform allocations,
 # M1_BOOT (500) ALE bootstrap resamples, M1_DROP_REPS (300) species-drop replicates,
-# M1_DROP_FRACS (0.3) deletion fractions.
+# M1_DROP_FRACS (0.3) deletion fractions, M1_MAX_TREES (3000) boosting-iteration ceiling.
 # =============================================================================
 suppressPackageStartupMessages({ library(terra); library(catboost); library(dplyr); library(readr)
   library(ggplot2); library(patchwork) })
@@ -36,7 +36,7 @@ STACK  <- paths$predictor_stack   # outputs/raster_model/predictor_stack.tif (bu
 outdir <- paths$model1; dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 # =============================================================================
-# SETTINGS - every value the run is parameterised by, and every env var it honours
+# SETTINGS 
 # =============================================================================
 
 # ---- which sections run (see the header for the M1_RUN vocabulary) ----
@@ -82,6 +82,14 @@ BASE <- list(loss_function = "RMSE", rsm = 0.8, subsample = 0.8,
              random_seed = 1, thread_count = 4,
              allow_writing_files = FALSE, logging_level = "Silent")
 PRELIM <- list(depth=6, learning_rate=.05, l2_leaf_reg=3)  # section 1 only, before tuning
+
+# Ceiling on boosting iterations, so early stopping SELECTS the tree count rather than
+# hitting a cap. At 1000 the tuned model returned 999 -- one below the limit, i.e. the
+# validation loss was still improving and the count was capped, not chosen. Raising the
+# ceiling shows the true optimum is 1022, and 3000 and 10000 both stop there, so 3000 is
+# ample. It costs almost nothing: od_wait = 50 means training halts ~50 iterations past
+# the optimum, not at the ceiling.
+MAX_TREES <- as.integer(Sys.getenv("M1_MAX_TREES", unset = "3000"))
 
 
 # =============================================================================
@@ -163,13 +171,21 @@ fit_es <- function(d, b, par, seed = 0, target = TARGET){
   catboost::catboost.train(
     pool(d[!m, ], d[[target]][!m]),
     pool(d[m, ], d[[target]][m]),
-    params = c(BASE, par, list(iterations = 1000, od_type = "Iter",
+    params = c(BASE, par, list(iterations = MAX_TREES, od_type = "Iter",
                                od_wait = 50, use_best_model = TRUE)))
 }
 
 # Early stopping picks the tree count, then the model is REFITTED on all of `d`. Used by
-# section 4 (performance), section 6 (ALE point estimate and every bootstrap replicate)
-# and section 9, so all of them describe one estimator.
+# section 4 (performance), section 5 (the confirmatory CV) and section 6 (the ALE point
+# estimate and every bootstrap replicate), so the reported R2 and the reported response
+# shapes describe one estimator.
+#
+# Sections 7-9 deliberately use fit_es instead. Their comparisons are internal -- across
+# resolutions, across transforms, across species subsets -- each fit costs half as much,
+# and consistency within a sweep matters more there than matching section 4. The
+# consequence is that their R2 values are NOT on the same scale as pooled_oof_r2: section
+# 9's full-pool baseline is a fit_es estimate and sits above the headline number for that
+# reason, not because dropping species helps.
 fit_final <- function(d, b, par, seed = 0){
   mes <- fit_es(d, b, par, seed)
   nt  <- tryCatch(mes$tree_count, error = function(e) NULL)
@@ -461,6 +477,17 @@ for (b in 1:NB){
 .n_bins <- (NB + 1L) * sum(vapply(grids, function(q) length(q) - 1L, integer(1)))
 message(sprintf("  empty ALE intervals: %d of %d (%.3f%%)",
                 .empty_bins, .n_bins, 100*.empty_bins/.n_bins))
+# An empty interval leaves eff = 0, which reads as "no effect" when it means "no data", and
+# because the curve is a cumsum that error propagates to every later point. It has never
+# fired here -- the grid is a quantile grid, so each interval holds ~120 cells drawn from
+# 11-53 distinct blocks, and the chance a bootstrap draw misses all of them is ~e^-11 at
+# worst. Warn rather than only counting, so a future grid or a coarser block cannot make
+# this silent.
+if (.empty_bins > 0)
+  warning(sprintf(paste("%d ALE intervals were empty in some bootstrap replicate and were",
+                        "accumulated as zero effect. The grid is too fine for the block",
+                        "structure: check unique blocks per interval before trusting the band."),
+                  .empty_bins), call. = FALSE)
 ale_tab <- bind_rows(lapply(PREDS, function(p){
   M <- ale[[p]]
   tibble::tibble(predictor  = as.character(NAME[[p]]),
@@ -479,6 +506,8 @@ write_csv(ale_tab, file.path(outdir,"ale_curves.csv"))
 # =============================================================================
 # Fit and test the model under different resolution and select the best pooled out-of-fold R²
 if (run_sec("resolution") || run_sec("transform")) local({
+# fit_es, not fit_final: this sweep compares resolutions against each other, so one
+# consistent estimator matters more than matching section 4's absolute R2 (see fit_final).
 cvfit <- function(d, b) fit_es(d, b, best)
 agg <- function(A){ if (A==1) return(df0)
   df0 |> mutate(R=floor((90-latitude)/(0.1*A)), C=floor((longitude+180)/(0.1*A))) |>
@@ -575,6 +604,8 @@ build <- function(keep){
   d <- data.frame(trunkrichness=rel[m], lon=lon[m], lat=lat[m], R=Rb[m], C=Cb[m]); d <- cbind(d, Pv[m,,drop=FALSE])
   d |> group_by(R,C) |> summarise(across(everything(), \(x) mean(x,na.rm=TRUE)), nn=n(), .groups="drop") |>
     filter(nn>=MINSUB) |> select(-nn) |> as.data.frame() }
+# fit_es, not fit_final: full pool and dropped pools are compared against each other, so
+# these R2 values are internally consistent but not on the pooled_oof_r2 scale.
 fit <- function(d) fit_es(d, blk(d$lon, d$lat, BLOCK), best)
 cvr2 <- function(d){ b<-blk(d$lon,d$lat,BLOCK); fo<-folds_of(b); oof<-rep(NA_real_,nrow(d))
   for (f in 0:4){ tr<-fo!=f; te<-fo==f; if(sum(te)<10) next
@@ -648,11 +679,15 @@ at <- ale_tab; at$predictor <- factor(at$predictor, levels=ord)
 ggsave(file.path(outdir,"M1_ALE.png"),
   ggplot(at, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi),fill=BLUE,alpha=.25) +
     geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
-    facet_wrap(~predictor, scales="free", ncol=2) +
+    # free_x only: all six ALEs are in the same response units, so freeing y as well would
+    # make a weak predictor look as strong as a strong one.
+    facet_wrap(~predictor, scales="free_x", ncol=2) +
     scale_y_continuous(labels=scales::label_number(scale=1e3)) +
     labs(x=NULL, y=expression("ALE ("%*%10^-3*")"),
-         title="Model 1 ALE with 95% block-bootstrap CI",
-         subtitle="rows: megafauna, vegetation, seasonality") +
+         title="Model 1 ALE with 95% pointwise block-bootstrap percentile interval",
+         subtitle=paste0("Band = 2.5-97.5% across ", NB, " block-bootstrap refits, taken separately at each x ",
+                         "(pointwise, not a simultaneous band).\nThe line is the single full-data fit, so it is ",
+                         "not the centre of the band by construction. Rows: megafauna, vegetation, seasonality.")) +
     theme(plot.subtitle=element_text(size=9, colour="grey35"),
           strip.text=element_text(face="bold", size=10)),
   width=7.5, height=9, dpi=300)
