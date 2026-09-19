@@ -47,7 +47,6 @@ ECO_ID,Ecoregion,Continent,Basis,EffBlocks,CellsInEcoregion,RichnessCI,Species
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Choeropsis_liberiensis
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Erythrocebus_patas
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Hippopotamus_amphibius
-6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Homo_sapiens
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Hyemoschus_aquaticus
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Kobus_kob
 6,Cross-Niger transition forests,Africa,highest mean,1.4,172,NA,Loxodonta_africana
@@ -69,7 +68,6 @@ ECO_ID,Ecoregion,Continent,Basis,EffBlocks,CellsInEcoregion,RichnessCI,Species
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Giraffa_camelopardalis
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hippopotamus_amphibius
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hippotragus_equinus
-74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Homo_sapiens
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Hystrix_cristata
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kobus_ellipsiprymnus
 74,Sudd flooded grasslands,Africa,highest mean with a reportable CI,6.1,1544,5.42e-03-7.35e-03,Kobus_kob
@@ -95,7 +93,6 @@ ECO_ID,Ecoregion,Continent,Basis,EffBlocks,CellsInEcoregion,RichnessCI,Species
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Bos_javanicus
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Bubalus_arnee
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Elephas_maximus
-285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Homo_spDenisova
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Hylobates_pileatus
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Hystrix_brachyura
 285,Tonle Sap freshwater swamp forests,Asia,highest mean,3.7,189,6.16e-03-7.00e-03,Macaca_leonina

@@ -21,7 +21,7 @@
 # Sections 6-9 are skippable, since 9 alone takes roughly 50 minutes:
 #   M1_RUN="all"                    (default)
 #   M1_RUN="core"                   sections 0-5 and 10 only
-#   M1_RUN="core,ale,resolution"    any subset of ale / resolution / transform / drop
+#   M1_RUN="core,ale,resolution"    any subset of ale / resolution / transform / ratio / drop
 # Repetition counts (env vars): M1_CV_REPS (10) performance allocations, M1_BLOCK_REPS (5)
 # correlogram allocations/subsamples, M1_CV_SEEDS (5) resolution + transform allocations,
 # M1_BOOT (500) ALE bootstrap resamples, M1_DROP_REPS (300) species-drop replicates,
@@ -47,6 +47,9 @@ message("sections requested: ", paste(.M1_RUN, collapse = ", "))
 # ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) ----
 # Chosen by the resolution sweep (resolution_sweep.csv)
 AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
+# 10% coverage: a degree cell is kept only if at least 10 of its 100 source cells
+# carry data. Used by the species-drop rebuild.
+MINSUB_M1 <- max(1, floor(0.10*AGG*AGG))
 
 # ---- repetition counts ----
 # Every estimate that depends on a random draw is averaged over several of them, so these
@@ -68,8 +71,8 @@ ENV <- c("vpi_mean","cold_mean","dry_mean","height")
 HERB <- c("mammal_richness","consumption")
 PREDS <- c(ENV, HERB); TARGET <- "trunkrichness"
 NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season deciduousness",
-          dry_mean="Dry-season deciduousness", height="Vegetation height",
-          mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
+          dry_mean="Dry-season deciduousness", height="Vegetation height (m)",
+          mammal_richness="Megafauna species richness (>5 kg)", consumption="Megafauna consumption (MgC/km²/year)")
 
 # ---- CatBoost ----
 # shared CatBoost settings: RMSE loss, 0.8 row/feature subsampling, silent
@@ -382,7 +385,7 @@ write_csv(data.frame(calibration_slope=mean(cal_v), calibration_slope_sd=sd(cal_
 message(sprintf("  calibration slope = %.3f (sd %.3f over %d allocations)",
                 mean(cal_v), sd(cal_v), NCV))
 
-message(sprintf("  residual Moran I (75km) = %.2f -> residual spatial dependence remains; uncertainty uses spatial resampling", mIr[1]))
+message(sprintf("  residual spatial correlation (75 km) = %.2f -> residual spatial dependence remains; uncertainty uses spatial resampling", mIr[1]))
 
 # Does the block size change the anwser
 rk2 <- cross_km(mIr); blk2 <- deg_from_km(rk2)
@@ -515,13 +518,98 @@ transform <- bind_rows(trows); write_csv(transform, file.path(outdir,"transform_
 })
 
 # =============================================================================
+# 8b. RATIO CHECK: is the environmental signal an artefact of the denominator?
+# =============================================================================
+# The reported response divides spiny-trunk richness by vascular plant richness. Plant
+# richness peaks in the wet tropics, so the ratio is mechanically inflated where plant
+# richness is low - open, drier, shorter vegetation. The productivity and height curves in
+# Fig. 4 have exactly that shape, so they have to be shown not to be a division artefact.
+#
+# Here the ratio is dissolved: the response is ABSOLUTE spiny-trunk richness and plant
+# richness enters as a seventh predictor. Same cells, same blocks, same hyperparameters, so
+# only the response and the predictor set differ. A curve that keeps its shape was not
+# produced by the denominator.
+if (run_sec("ratio")) local({
+  message("8b. RATIO CHECK (absolute response, plant richness as a predictor)")
+  st <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
+  ab <- align_to_template(
+    rast(require_file(paths$abs_richness, "absolute spiny-trunk richness")), st[[1]])
+  pl <- align_to_template(
+    rast(require_file(paths$plant_rich_rast,
+                      "gridded vascular plant richness (written by 01)")), st[[1]])
+  # Averaged over the same source cells as the response: df is built with na.rm = TRUE,
+  # so it drops every 0.1 deg cell without a relative-richness value, and the two extra
+  # layers must drop them too or they would describe a different set of cells from the
+  # six predictors they sit beside.
+  e0 <- as.data.frame(c(st, ab, pl), xy = TRUE, na.rm = FALSE)
+  names(e0)[(ncol(e0)-1):ncol(e0)] <- c("abs_richness", "plant_richness")
+  # df keeps a 0.1 deg cell only where every stack layer is finite; the extras have to
+  # be averaged over that same set or they describe different cells from their neighbours
+  e0 <- e0[stats::complete.cases(e0[, c(TARGET, PREDS)]), ]
+  extra <- e0 |>
+    mutate(R = floor((90 - y)/(0.1*AGG)), C = floor((x + 180)/(0.1*AGG))) |>
+    group_by(R, C) |>
+    summarise(abs_richness   = mean(abs_richness,   na.rm = TRUE),
+              plant_richness = mean(plant_richness, na.rm = TRUE), .groups = "drop")
+  # start from df, so this is fitted to the very cells the main model used
+  g <- df |>
+    mutate(R = floor((90 - latitude)/(0.1*AGG)), C = floor((longitude + 180)/(0.1*AGG))) |>
+    left_join(extra, by = c("R", "C")) |>
+    filter(is.finite(abs_richness), is.finite(plant_richness)) |>
+    as.data.frame()
+  message(sprintf("  %d of %d Model 1 cells carry both extra layers", nrow(g), nrow(df)))
+  stopifnot(nrow(g) > 0.95*nrow(df))
+
+  P2  <- c(PREDS, "plant_richness")
+  b   <- blk(g$longitude, g$latitude, BLOCK)
+  fo  <- folds_of(b, 5, 1)
+  oof <- rep(NA_real_, nrow(g))
+  for (f in 0:4){ tr <- fo != f; te <- fo == f
+    m <- catboost::catboost.train(pool(g[tr, ], g$abs_richness[tr], P2), NULL,
+                                  params = c(BASE, best, list(iterations = 400)))
+    oof[te] <- catboost::catboost.predict(m, pool(g[te, ], preds = P2)) }
+  ok     <- is.finite(oof)
+  r2_abs <- r2(g$abs_richness[ok], oof[ok])
+
+  mfit <- catboost::catboost.train(pool(g, g$abs_richness, P2), NULL,
+                                   params = c(BASE, best, list(iterations = 400)))
+  gr <- lapply(P2, function(p) unique(quantile(g[[p]], seq(0, 1, length.out = 41))))
+  names(gr) <- P2
+  # ale_curve() predicts on PREDS; this fit carries one more column, so the accumulation
+  # is done here rather than reusing it
+  ale2 <- lapply(P2, function(p){
+    q  <- gr[[p]]
+    bi <- pmin(pmax(findInterval(g[[p]], q[-c(1, length(q))]), 0), length(q) - 2)
+    eff <- numeric(length(q) - 1)
+    for (k in seq_len(length(q) - 1)){ mm <- bi == (k - 1); if (!any(mm)) next
+      dl <- g[mm, ]; du <- g[mm, ]; dl[[p]] <- q[k]; du[[p]] <- q[k + 1]
+      eff[k] <- mean(catboost::catboost.predict(mfit, pool(du, preds = P2)) -
+                     catboost::catboost.predict(mfit, pool(dl, preds = P2))) }
+    a <- c(0, cumsum(eff)); a - mean(a[bi + 2]) })
+  names(ale2) <- P2
+
+  write_csv(bind_rows(lapply(P2, function(p)
+      data.frame(predictor = p, x = gr[[p]], ale = ale2[[p]],
+                 ale_sd = ale2[[p]]/sd(g$abs_richness)))),
+    file.path(outdir, "ratio_check_ale.csv"))
+  write_csv(data.frame(response = "absolute spiny-trunk richness",
+                       predictors = paste(P2, collapse = ", "),
+                       n_cells = nrow(g), block_deg = BLOCK, pooled_oof_r2 = r2_abs),
+            file.path(outdir, "ratio_check_performance.csv"))
+  message(sprintf("  absolute-response model: n=%d, pooled OOF R2=%.3f", nrow(g), r2_abs))
+  for (p in c("mammal_richness", "consumption"))
+    message(sprintf("  %-16s ALE amplitude %.3f SD of the response",
+                    p, diff(range(ale2[[p]]))/sd(g$abs_richness)))
+})
+
+# =============================================================================
 # 9. SPECIES-DROP SENSITIVITY
 # =============================================================================
 if (run_sec("drop")) local({
 message("9. SPECIES-DROP SENSITIVITY")
 ABS <- paths$abs_richness; REL <- paths$rel_richness; RANGES <- paths$spiny_ranges
 NAME <- c(vpi_mean="Productivity (VPI)", cold_mean="Cold-season decid.", dry_mean="Dry-season decid.",
-          height="Vegetation height", mammal_richness="Megafauna richness (>5 kg)", consumption="Megafauna consumption")
+          height="Vegetation height (m)", mammal_richness="Megafauna species richness (>5 kg)", consumption="Megafauna consumption (MgC/km²/year)")
 ALE_ORDER <- c("mammal_richness","consumption","vpi_mean","height","cold_mean","dry_mean")
 
 # makes sure all rasters match, reconstruct richness, get cell coordiantes and precitors, and converts range into presence raster cells
@@ -540,7 +628,7 @@ if (round(1/rs[1]) != AGG)
   stop(sprintf("species-drop aggregation (%d) disagrees with the model's AGG (%d)",
                round(1/rs[1]), AGG), call.=FALSE)
 Rb <- row0%/%AGG; Cb <- col0%/%AGG
-MINSUB <- max(1, floor(0.10*AGG*AGG))
+MINSUB <- MINSUB_M1
 
 gpkgs <- list.files(RANGES, "\\.gpkg$", full.names=TRUE)
 message(length(gpkgs)," species; rasterising presences")
@@ -610,13 +698,14 @@ dd$predictor <- factor(dd$predictor, levels=NAME[ALE_ORDER])
 ggsave(file.path(outdir,"M1_jackknife_ALE.png"),
   ggplot(dd, aes(x)) + geom_ribbon(aes(ymin=lo,ymax=hi), fill="#e8a13a", alpha=.35) +
     geom_line(aes(y=full), colour="#2c6fbb", linewidth=.8) + geom_hline(yintercept=0, colour="grey60") +
-    facet_wrap(~predictor, scales="free", ncol=3) + labs(x=NULL, y="ALE",
+    facet_wrap(~predictor, scales="free", ncol=3) +
+    scale_y_continuous(labels=scales::label_number(scale=1e3)) +
+    labs(x=NULL, y=expression("ALE of relative spiny-trunk tree richness ("%*%10^-3*")"),
     title=sprintf("Model 1 species-drop sensitivity: ALE stability when %d%% of species are removed (blue = all %d species)",
-                  as.integer(ALE_FRAC*100), nsp),
-    subtitle=sprintf("Envelope = 2.5-97.5%% of %d random-deletion replicates; response rescaled by the retention fraction so amplitudes are comparable", NREP)) +
+                  as.integer(ALE_FRAC*100), nsp)) +
     theme_minimal(base_size=10) + theme(panel.grid=element_blank(),
     plot.title=element_text(face="bold",size=11),
-    plot.subtitle=element_text(size=8.5, colour="grey30"), axis.line=element_line(colour="grey30")),
+    axis.line=element_line(colour="grey30")),
   width=13, height=7, dpi=175)
 
 })
@@ -640,14 +729,9 @@ ggsave(file.path(outdir,"M1_ALE.png"),
     geom_line(aes(y=ale),colour=BLUE,linewidth=.8) + geom_hline(yintercept=0,colour="grey60",linewidth=.3) +
     facet_wrap(~predictor, scales="free", ncol=2) +
     scale_y_continuous(labels=scales::label_number(scale=1e3)) +
-    labs(x=NULL, y=expression("ALE ("%*%10^-3*")"),
-         title="Model 1 ALE with 95% pointwise block-bootstrap percentile interval",
-         subtitle=paste0("Band = 2.5-97.5% across ", NB, " block-bootstrap refits, taken separately at each x ",
-                         "(pointwise, not a simultaneous band).\nThe line is the single full-data fit, so it is ",
-                         "not the centre of the band by construction.\nEach panel has its own y scale: read the ",
-                         "shapes, not the relative heights. Rows: megafauna, vegetation, seasonality.")) +
-    theme(plot.subtitle=element_text(size=9, colour="grey35"),
-          strip.text=element_text(face="bold", size=10)),
+    labs(x=NULL, y=expression("ALE of relative spiny-trunk tree richness ("%*%10^-3*")"),
+         title="Model 1 ALE with 95% pointwise block-bootstrap percentile interval") +
+    theme(strip.text=element_text(face="bold", size=10)),
   width=7.5, height=9, dpi=300)
 }
 # collinearity: correlation heatmap + VIF + concurvity
@@ -664,12 +748,13 @@ ggsave(file.path(outdir,"M1_collinearity.png"), ph + pv + pc + plot_layout(width
 dobs <- tibble::tibble(o=df[[TARGET]][ok], p=oof[ok])
 
 p1 <- ggplot(dobs, aes(o,p)) + geom_point(alpha=.1,size=.5,colour=BLUE) + geom_abline(linetype=2) +
-  labs(x="Observed", y="Predicted (OOF)", title=sprintf("Obs vs pred (allocation 1: pooled OOF R²=%.3f)", pooled_v[1]))
+  labs(x="Observed relative richness", y="Predicted, out-of-fold", title=sprintf("Obs vs pred (allocation 1: pooled OOF R²=%.3f)", pooled_v[1]))
 cal <- dobs; cal$b <- dplyr::ntile(cal$p, 10); cal <- aggregate(cbind(o,p)~b, cal, mean)  # ntile cannot fail on tied predictions
-p2 <- ggplot(cal, aes(p,o)) + geom_line(colour=BLUE) + geom_point(colour=BLUE) + geom_abline(linetype=2) + labs(x="Predicted (decile)",y="Observed",title="Calibration")
+p2 <- ggplot(cal, aes(p,o)) + geom_line(colour=BLUE) + geom_point(colour=BLUE) + geom_abline(linetype=2) + labs(x="Predicted relative richness (decile mean)", y="Observed relative richness",
+                title="Calibration")
 p3 <- ggplot(tibble::tibble(s=resid[ok]), aes(sample=s)) + stat_qq(size=.4,colour=BLUE) + stat_qq_line(linetype=2) + labs(x="Theoretical",y="Ordered",title="Residual QQ")
 cg <- tibble::tibble(dist_km=mids, moranI=mIr)
-p4 <- ggplot(cg, aes(dist_km,moranI)) + geom_line(colour="#c44") + geom_point(colour="#c44",size=1) + geom_hline(yintercept=.1,linetype=3,colour="grey") + coord_cartesian(xlim=c(0,2000)) + labs(x="Distance (km)",y="Moran's I",title="Residual autocorrelation")
+p4 <- ggplot(cg, aes(dist_km,moranI)) + geom_line(colour="#c44") + geom_point(colour="#c44",size=1) + geom_hline(yintercept=.1,linetype=3,colour="grey") + coord_cartesian(xlim=c(0,2000)) + labs(x="Distance (km)",y="Residual spatial correlation",title="Residual autocorrelation")
 ggsave(file.path(outdir,"M1_diagnostics.png"), p1+p2+p3+p4+plot_layout(nrow=1), width=19, height=4.3, dpi=170)
 
 message("DONE -> ", outdir)

@@ -1,7 +1,7 @@
 predictor,VIF,concurvity_R2
-Productivity (VPI),2.61,0.772
-Cold-season deciduousness,1.5,0.67
-Dry-season deciduousness,2.04,0.723
-Vegetation height,2.38,0.772
-Megafauna richness (>5 kg),4.38,0.838
-Megafauna consumption,4.5,0.84
+Productivity (VPI),2.64,0.773
+Cold-season deciduousness,1.5,0.665
+Dry-season deciduousness,2.02,0.723
+Vegetation height (m),2.41,0.771
+Megafauna species richness (>5 kg),4.72,0.849
+Megafauna consumption (MgC/km²/year),4.83,0.848

@@ -28,10 +28,8 @@ create_project_dirs()
 # 1. SETTINGS
 # =============================================================================
 
-# What counts as a large herbivore. The three orders are dropped because they pass the mass
-# and diet filters without being large herbivores in the sense meant here.
-MASS_MIN_G     <- 5000
-EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
+# MASS_MIN_G and EXCLUDE_ORDERS define what counts as a large herbivore; they live in
+# config.R because 04 applies the same filter.
 
 # The ecoregion ranking is taken from the TOTAL condition
 RANKING_COND <- "total"
@@ -72,7 +70,8 @@ present_in_poly <- function(r_path, poly_sf) {
 # =============================================================================
 traits0 <- read_csv(traits_path, show_col_types = FALSE) |>
   filter(Mass.g > MASS_MIN_G, Terrestrial == 1, Diet.Plant > 0,
-         !Order.1.2 %in% EXCLUDE_ORDERS) |>
+         !Order.1.2 %in% EXCLUDE_ORDERS,
+         !genus_of(Binomial.1.2) %in% EXCLUDE_GENERA) |>
   mutate(raster_path = file.path(ranges_nat, paste0(Binomial.1.2, ".tif")))
 
 # A partial range download would otherwise shorten every species list without a trace.

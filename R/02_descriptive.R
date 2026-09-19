@@ -266,8 +266,15 @@ summarise_cond <- function(relfile, tag){
   # Area-weighted density of the CELL distribution, one curve per biome. 
   dens <- do.call(rbind, lapply(seq_len(nrow(bio)), function(i){
     z <- d[d$BIOME_NAME == bio$biome[i], ]
-    dn <- density(z$rel, weights = z$w/sum(z$w), bw = bio$rsd[i]*BW_FRAC,
+    # Relative richness cannot be negative, but a Gaussian kernel puts mass below zero and
+    # `from = 0` discards it rather than accounting for it, so every curve is biased down at
+    # the boundary. Reflect the sample about zero and fold the mirrored mass back: the
+    # standard boundary correction. (The upper limit is a display cut at the 99.5th
+    # percentile, not a boundary, so nothing is reflected there.)
+    wn <- z$w/sum(z$w)
+    dn <- density(c(z$rel, -z$rel), weights = c(wn, wn)/2, bw = bio$rsd[i]*BW_FRAC,
                   from = 0, to = bio$hi[i], n = 512)
+    dn$y <- 2*dn$y
     data.frame(biome = bio$biome[i], x = dn$x, y = dn$y/max(dn$y)) }))
   # Ecoregion summaries
   ec <- d |> group_by(ECO_ID) |> filter(n()>=MIN_ECO_CELLS) |> group_modify(~{
@@ -316,8 +323,15 @@ S <- setNames(lapply(names(RELF), function(k) summarise_cond(RELF[[k]], k)), nam
 message("maps")
 borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(options=c("WRAPDATELINE=YES"))
 
-mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE){
-  r <- rast(file.path(RELD,tif)); r[r<=0] <- NA; d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
+mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE, agg1=FALSE){
+  r <- rast(file.path(RELD,tif)); r[r<=0] <- NA
+  # agg1: draw at 1 degree. The denominator's native grain is 7,774 km2 (~0.8 deg), so a
+  # 0.1 deg ratio map would claim a precision only the numerator has. Aggregated exactly
+  # as the models aggregate: mean of the 0.1 deg ratios, cell kept where at least 10 of
+  # its 100 source cells carry data.
+  if (agg1) { kk <- aggregate(!is.na(r), fact=10, fun="sum", na.rm=TRUE)
+              r <- aggregate(r, fact=10, fun="mean", na.rm=TRUE); r[kk < 10] <- NA }
+  d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
   vmax <- as.numeric(quantile(d$v, .99, na.rm=TRUE))
   g <- ggplot() + geom_raster(data=d, aes(x,y,fill=v)) +
     geom_sf(data=borders, fill=NA, colour="grey25", linewidth=.12) +
@@ -342,25 +356,19 @@ maps <- list(
   c("Absolute_Richness_Tot.tif","Absolute richness of spiny-trunk species (0.1°)","Species richness","D","MAP_absolute_richness"),
   c("Absolute_Richness_Prickly.tif","Absolute richness of prickly-trunk species (0.1°)","Species richness","D","MAP_absolute_prickly"),
   c("Absolute_Richness_Thorny.tif","Absolute richness of thorny-trunk species (0.1°)","Species richness","D","MAP_absolute_thorny"),
-  c("Relative_Richness_Tot.tif","Relative richness of spiny-trunk species (0.1°)","Relative richness","D","MAP_relative_richness"),
-  c("Relative_Richness_Prickly.tif","Relative richness of prickly-trunk species (0.1°)","Relative richness","D","MAP_relative_prickly"),
-  c("Relative_Richness_Thorny.tif","Relative richness of thorny-trunk species (0.1°)","Relative richness","D","MAP_relative_thorny"))
-for (m in maps) ggsave(file.path(outdir,paste0(m[5],".png")), mk_map(m[1],m[2],m[3],m[4]), width=12, height=5.2, dpi=170)
+  c("Relative_Richness_Tot.tif","Relative richness of spiny-trunk species (1°)","Relative richness","D","MAP_relative_richness"),
+  c("Relative_Richness_Prickly.tif","Relative richness of prickly-trunk species (1°)","Relative richness","D","MAP_relative_prickly"),
+  c("Relative_Richness_Thorny.tif","Relative richness of thorny-trunk species (1°)","Relative richness","D","MAP_relative_thorny"))
+# The relative maps are drawn at 1 deg (see mk_map); the absolute maps are pure numerator
+# and keep their 0.1 deg grain.
+for (m in maps) ggsave(file.path(outdir,paste0(m[5],".png")),
+  mk_map(m[1],m[2],m[3],m[4], agg1=startsWith(m[1], "Relative")), width=12, height=5.2, dpi=170)
 
 # ---- 7b. axis labels and captions --------------------------------------------
 XLAB_B <- expression("Relative richness ("%*%10^-3*")")
 XLAB_E <- expression("Mean relative richness ("%*%10^-3*", 95% CI)")
-CAP_B  <- paste0("Restricted to cells holding at least one spiny-trunk species. Area-weighted density of\n",
-                 "the cell distribution, truncated at the 99.5th percentile of each biome and scaled to equal\n",
-                 "peak height; cell count at right.  Diamond = area-weighted mean;  tick = area-weighted median.\n",
-                 "Bandwidth = ", BW_FRAC, " x IQR/1.349 within each biome, so all biomes are smoothed at the same\n",
-                 "fraction of their own spread rather than by cell count. The curves show shape, not fine structure.")
-# %.0f, not %d: ceiling() returns a double and sprintf("%d", 2.0) is an error in R.
-CAP_E  <- sprintf(paste("Restricted to cells holding at least one spiny-trunk species.",
-                        "point = area-weighted mean;\nbar = 95%% block-bootstrap CI over %.0f-deg blocks;",
-                        "(n) = effective independent blocks.\nOpen symbol: fewer than %.0f effective",
-                        "blocks, too few for a percentile bootstrap, so no interval is reported."),
-                  BLOCK_ECO, MIN_EFF_CI)
+# The construction of these panels is described in the Figure 3 legend rather than drawn
+# into the figure, so the two cannot drift apart.
 
 # ---- 7c. panel builders ------------------------------------------------------
 mk_biome <- function(bio, dens, keyed) {
@@ -379,13 +387,14 @@ mk_biome <- function(bio, dens, keyed) {
     scale_y_continuous(breaks=bio$pos, labels=blab(bio$biome), expand=expansion(add=c(.1,1.05))) +
     scale_x_continuous(labels=label_number(scale=1e3), limits=c(0,xmax),
                        expand=expansion(mult=c(.01,.02))) +
-    labs(x=XLAB_B, y=NULL, caption=CAP_B) +
+    labs(x=XLAB_B, y=NULL) +
     theme(axis.text.y=element_text(size=9),
           axis.line.x=element_line(colour="grey30"),
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
 
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
-  labs_txt <- sprintf("%s  (%.0f)", top$ECO_NAME, top$eff_blocks)
+  # one decimal: 2.6 printed as "(3)" while its symbol was open for being below 3.
+  labs_txt <- sprintf("%s  (%.1f)", top$ECO_NAME, top$eff_blocks)
   top$lab  <- factor(labs_txt, levels=rev(labs_txt))
   top$no_ci <- is.na(top$lo)
   ggplot(top, aes(mean, lab)) + geom_errorbar(aes(xmin=lo,xmax=hi), orientation="y", width=0, colour="grey65", linewidth=.5) +
@@ -394,7 +403,7 @@ mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
     scale_colour_manual(values=sapply(sort(unique(top$BIOME_NAME)),bcol),
       labels=function(b) blab(b), name="Biome", guide=if (legend) "legend" else "none") +
     scale_x_continuous(labels=label_number(scale=1e3)) +
-    labs(x=XLAB_E, y=NULL, caption=CAP_E) +
+    labs(x=XLAB_E, y=NULL) +
     theme(axis.text.y=element_text(size=9), legend.position="right",
           legend.text=element_text(size=7), legend.title=element_text(size=8),
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
@@ -412,8 +421,8 @@ for (cond in names(S)){
   ggsave(file.path(outdir,sprintf("FIG_ecoregion_%s.png",cond)),
          mk_eco(ec, legend=TRUE) + labs(title=sprintf("Top-25 ecoregions, relative %s-trunk richness", CLAB[[cond]])),
          width=11, height=9, dpi=170)
-  pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (0.1°)", CLAB[[cond]]),
-               expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE)
+  pa <- mk_map(RELF[[cond]], sprintf("A)  Relative richness of %s-trunk species (1°)", CLAB[[cond]]),
+               expression(atop("Relative richness","("%*%10^-3*")")), "D", scale_1e3=TRUE, inset=TRUE, agg1=TRUE)
   pb <- mk_biome(bio, dens, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
 

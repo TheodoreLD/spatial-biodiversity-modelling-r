@@ -1,10 +1,10 @@
 Continent,Ecoregion,Basis,Order.1.2,SpeciesCount
 Africa,Cross-Niger transition forests,highest mean,Cetartiodactyla,11
-Africa,Cross-Niger transition forests,highest mean,Primates,5
+Africa,Cross-Niger transition forests,highest mean,Primates,4
 Africa,Cross-Niger transition forests,highest mean,Proboscidea,1
 Africa,Sudd flooded grasslands,highest mean with a reportable CI,Cetartiodactyla,26
 Africa,Sudd flooded grasslands,highest mean with a reportable CI,Perissodactyla,3
-Africa,Sudd flooded grasslands,highest mean with a reportable CI,Primates,3
+Africa,Sudd flooded grasslands,highest mean with a reportable CI,Primates,2
 Africa,Sudd flooded grasslands,highest mean with a reportable CI,Proboscidea,1
 Africa,Sudd flooded grasslands,highest mean with a reportable CI,Rodentia,1
 Americas,Beni savanna,highest mean,Cetartiodactyla,13
@@ -17,7 +17,7 @@ Americas,Beni savanna,highest mean,Litopterna,2
 Americas,Beni savanna,highest mean,Notoungulata,1
 Americas,Beni savanna,highest mean,Proboscidea,1
 Asia,Tonle Sap freshwater swamp forests,highest mean,Cetartiodactyla,9
-Asia,Tonle Sap freshwater swamp forests,highest mean,Primates,6
+Asia,Tonle Sap freshwater swamp forests,highest mean,Primates,5
 Asia,Tonle Sap freshwater swamp forests,highest mean,Perissodactyla,2
 Asia,Tonle Sap freshwater swamp forests,highest mean,Proboscidea,1
 Asia,Tonle Sap freshwater swamp forests,highest mean,Rodentia,1

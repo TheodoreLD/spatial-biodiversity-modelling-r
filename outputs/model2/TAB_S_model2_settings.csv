@@ -1,0 +1,21 @@
+setting,value
+Learner,CatBoost gradient boosting
+Loss,RMSE
+Tree depth,4
+L2 regularisation,10
+Learning rate,0.05
+Boosting iterations,300
+Row/feature subsampling,none
+Hyperparameter tuning,none; settings fixed so scores are comparable across clades
+Monotone constraint (clade alone),(1)
+Monotone constraint (clade + environment),"(1,0,0,0,0)"
+Environmental covariates,"vpi_mean, cold_mean, dry_mean, height"
+Cross-validation folds,5
+Independent fold assignments,10
+Block-bootstrap resamples,250
+Spatial block size,"Americas 12 deg, Africa 7 deg, Asia 8 deg"
+Response grid,"up to 50 quantiles of clade richness, deduplicated"
+Estimability rule,at least three distinct richness values
+Species-drop fraction,30%
+Species-drop replicates,90
+Species-drop conditions,total richness only

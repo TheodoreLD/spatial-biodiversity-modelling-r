@@ -1,0 +1,2 @@
+response,predictors,n_cells,block_deg,pooled_oof_r2
+absolute spiny-trunk richness,"vpi_mean, cold_mean, dry_mean, height, mammal_richness, consumption, plant_richness",4806,8,0.4780047672295512

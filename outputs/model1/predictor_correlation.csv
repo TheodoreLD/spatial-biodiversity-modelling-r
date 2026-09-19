@@ -1,7 +1,7 @@
-var,Productivity (VPI),Cold-season deciduousness,Dry-season deciduousness,Vegetation height,Megafauna richness (>5 kg),Megafauna consumption
-Productivity (VPI),1,-0.483,-0.673,0.722,0.195,0.17
+var,Productivity (VPI),Cold-season deciduousness,Dry-season deciduousness,Vegetation height (m),Megafauna species richness (>5 kg),Megafauna consumption (MgC/km²/year)
+Productivity (VPI),1,-0.483,-0.673,0.722,0.203,0.17
 Cold-season deciduousness,-0.483,1,0.424,-0.254,0.056,0.123
-Dry-season deciduousness,-0.673,0.424,1,-0.612,0.002,-0.082
-Vegetation height,0.722,-0.254,-0.612,1,0.086,0.187
-Megafauna richness (>5 kg),0.195,0.056,0.002,0.086,1,0.829
-Megafauna consumption,0.17,0.123,-0.082,0.187,0.829,1
+Dry-season deciduousness,-0.673,0.424,1,-0.612,-0.015,-0.082
+Vegetation height (m),0.722,-0.254,-0.612,1,0.097,0.187
+Megafauna species richness (>5 kg),0.203,0.056,-0.015,0.097,1,0.844
+Megafauna consumption (MgC/km²/year),0.17,0.123,-0.082,0.187,0.844,1

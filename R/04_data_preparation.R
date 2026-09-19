@@ -28,9 +28,8 @@ create_project_dirs()
 # 1. SETTINGS
 # =============================================================================
 
-# What counts as a large herbivore. 
-MASS_MIN_G     <- 5000
-EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
+# MASS_MIN_G and EXCLUDE_ORDERS define what counts as a large herbivore; they live in
+# config.R because 03 applies the same filter.
 
 # Anything beyond this magnitude is a fill value, not data. Used once, by the check in
 # section 6 that refuses to write a stack the clamp failed to clean.
@@ -46,18 +45,7 @@ ENV_STACKS <- c(vpi  = "vpi_stack.nc",
 # 2. HELPERS
 # =============================================================================
 
-align_to_template <- function(x, template, method = "bilinear") {
-  out <- terra::project(x, template, method = method)
-  if (method != "near") {
-    g <- suppressWarnings(terra::global(x, c("min", "max"), na.rm = TRUE))
-    for (i in seq_len(terra::nlyr(out))) {
-      lo <- g[i, "min"]; hi <- g[i, "max"]
-      if (is.finite(lo) && is.finite(hi))
-        out[[i]][out[[i]] < lo | out[[i]] > hi] <- NA
-    }
-  }
-  out
-}
+# align_to_template() lives in config.R: 05's ratio check needs it too.
 
 report_coverage <- function(x, nm){
   n <- sum(!is.na(x))
@@ -73,7 +61,8 @@ load_large_herbivore_traits <- function(traits_csv) {
       Mass.g > MASS_MIN_G,
       Terrestrial == 1,
       Diet.Plant > 0,
-      !Order.1.2 %in% EXCLUDE_ORDERS
+      !Order.1.2 %in% EXCLUDE_ORDERS,
+      !genus_of(Binomial.1.2) %in% EXCLUDE_GENERA
     ) %>%
     mutate(species_name = gsub("_", " ", Binomial.1.2))
 }
@@ -175,7 +164,10 @@ mammal_richness <- sum(clade_stack, na.rm = TRUE)
 mammal_richness[valid_clades == 0] <- NA
 
 consumption_list <- readRDS(require_file(paths$consumption_rds, "mammal consumption RDS"))
-consumption <- terra::rast(consumption_list[["pn.consumption.maps"]][[1]])
+# The RDS holds six scenarios (current / present-natural, each also not-threatened and
+# extant-only), and each is a list of five summaries: mean, geo.mean, geo.sd, q025, q975.
+# The paper uses present-natural throughout, and the arithmetic mean of modelled consumption.
+consumption <- terra::rast(consumption_list[["pn.consumption.maps"]][["mean"]])
 if (terra::nlyr(consumption) != 1)
   stop("consumption raster must contain exactly one layer", call. = FALSE)
 consumption <- align_to_template(consumption, trunk_richness)
