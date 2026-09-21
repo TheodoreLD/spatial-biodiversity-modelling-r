@@ -31,8 +31,7 @@ create_project_dirs()
 # MASS_MIN_G and EXCLUDE_ORDERS define what counts as a large herbivore; they live in
 # config.R because 03 applies the same filter.
 
-# Anything beyond this magnitude is a fill value, not data. Used once, by the check in
-# section 6 that refuses to write a stack the clamp failed to clean.
+# Anything beyond this magnitude is a fill value, not data. 
 FILL_LIMIT <- 1e30
 
 # Multi-layer environmental stacks, each reduced to a per-cell mean over its layers.
@@ -98,8 +97,7 @@ build_clade_richness_stack <- function(large_mammals, ranges_dir, template, outp
               " species: ", paste(head(species[is.na(idx)], 5), collapse = ", "),
               if (sum(is.na(idx)) > 5) ", ..." else "", call. = FALSE)
 
-    # near, not bilinear: these are counts of 0/1 presences and PHYLACINE is coarser than
-    # the template, so interpolating would turn a count into a fraction.
+
     clade_raster <- align_to_template(
       sum(terra::rast(sp_paths), na.rm = TRUE), template, method = "near")
 
@@ -164,9 +162,7 @@ mammal_richness <- sum(clade_stack, na.rm = TRUE)
 mammal_richness[valid_clades == 0] <- NA
 
 consumption_list <- readRDS(require_file(paths$consumption_rds, "mammal consumption RDS"))
-# The RDS holds six scenarios (current / present-natural, each also not-threatened and
-# extant-only), and each is a list of five summaries: mean, geo.mean, geo.sd, q025, q975.
-# The paper uses present-natural throughout, and the arithmetic mean of modelled consumption.
+
 consumption <- terra::rast(consumption_list[["pn.consumption.maps"]][["mean"]])
 if (terra::nlyr(consumption) != 1)
   stop("consumption raster must contain exactly one layer", call. = FALSE)

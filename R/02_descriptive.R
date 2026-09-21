@@ -97,8 +97,6 @@ wquantile <- function(x, w, p){ o <- order(x); x <- x[o]; w <- w[o]
   x[which(cumsum(w)/sum(w) >= p)[1]] }
 
 # estimates how many equally weighted independent units the unequal weights effectively represent.
-# converts unequal block or ecoregion weights into an “equivalent” number of equally sized units,
-# so one very large unit is not misleadingly counted as many independent units when judging whether there is enough information for a confidence interval
 kish <- function(W) sum(W)^2 / sum(W^2) # Kish effective sample size
 
 # repeatedly resamples entire spatial blocks and recalculates the area-weighted mean, producing
@@ -266,11 +264,6 @@ summarise_cond <- function(relfile, tag){
   # Area-weighted density of the CELL distribution, one curve per biome. 
   dens <- do.call(rbind, lapply(seq_len(nrow(bio)), function(i){
     z <- d[d$BIOME_NAME == bio$biome[i], ]
-    # Relative richness cannot be negative, but a Gaussian kernel puts mass below zero and
-    # `from = 0` discards it rather than accounting for it, so every curve is biased down at
-    # the boundary. Reflect the sample about zero and fold the mirrored mass back: the
-    # standard boundary correction. (The upper limit is a display cut at the 99.5th
-    # percentile, not a boundary, so nothing is reflected there.)
     wn <- z$w/sum(z$w)
     dn <- density(c(z$rel, -z$rel), weights = c(wn, wn)/2, bw = bio$rsd[i]*BW_FRAC,
                   from = 0, to = bio$hi[i], n = 512)
@@ -325,10 +318,7 @@ borders <- st_read(BORD, quiet=TRUE) |> st_make_valid() |> st_wrap_dateline(opti
 
 mk_map <- function(tif, ttl, clab, pal, scale_1e3=FALSE, inset=FALSE, agg1=FALSE){
   r <- rast(file.path(RELD,tif)); r[r<=0] <- NA
-  # agg1: draw at 1 degree. The denominator's native grain is 7,774 km2 (~0.8 deg), so a
-  # 0.1 deg ratio map would claim a precision only the numerator has. Aggregated exactly
-  # as the models aggregate: mean of the 0.1 deg ratios, cell kept where at least 10 of
-  # its 100 source cells carry data.
+  # agg1: draw at 1 degree
   if (agg1) { kk <- aggregate(!is.na(r), fact=10, fun="sum", na.rm=TRUE)
               r <- aggregate(r, fact=10, fun="mean", na.rm=TRUE); r[kk < 10] <- NA }
   d <- as.data.frame(r, xy=TRUE); names(d) <- c("x","y","v")
@@ -359,16 +349,14 @@ maps <- list(
   c("Relative_Richness_Tot.tif","Relative richness of spiny-trunk species (1°)","Relative richness","D","MAP_relative_richness"),
   c("Relative_Richness_Prickly.tif","Relative richness of prickly-trunk species (1°)","Relative richness","D","MAP_relative_prickly"),
   c("Relative_Richness_Thorny.tif","Relative richness of thorny-trunk species (1°)","Relative richness","D","MAP_relative_thorny"))
-# The relative maps are drawn at 1 deg (see mk_map); the absolute maps are pure numerator
-# and keep their 0.1 deg grain.
+
 for (m in maps) ggsave(file.path(outdir,paste0(m[5],".png")),
   mk_map(m[1],m[2],m[3],m[4], agg1=startsWith(m[1], "Relative")), width=12, height=5.2, dpi=170)
 
 # ---- 7b. axis labels and captions --------------------------------------------
 XLAB_B <- expression("Relative richness ("%*%10^-3*")")
 XLAB_E <- expression("Mean relative richness ("%*%10^-3*", 95% CI)")
-# The construction of these panels is described in the Figure 3 legend rather than drawn
-# into the figure, so the two cannot drift apart.
+
 
 # ---- 7c. panel builders ------------------------------------------------------
 mk_biome <- function(bio, dens, keyed) {
@@ -393,7 +381,6 @@ mk_biome <- function(bio, dens, keyed) {
           plot.caption=element_text(size=7, colour="grey35", hjust=0)) }
 
 mk_eco <- function(ec, legend=TRUE) { top <- head(ec,25)
-  # one decimal: 2.6 printed as "(3)" while its symbol was open for being below 3.
   labs_txt <- sprintf("%s  (%.1f)", top$ECO_NAME, top$eff_blocks)
   top$lab  <- factor(labs_txt, levels=rev(labs_txt))
   top$no_ci <- is.na(top$lo)
@@ -426,8 +413,7 @@ for (cond in names(S)){
   pb <- mk_biome(bio, dens, keyed) + labs(title="B)  By biome")
   pc <- mk_eco(ec, legend=FALSE) + labs(title="C)  Top 25 ecoregions")
 
-  # The ridgeline needs more vertical room than the point-and-bar panel it replaced, so the
-  # second row takes more of the height and the whole figure is taller.
+
   comp <- free(pa, side="l") / (pb + pc + plot_layout(widths=c(1,1.12))) +
           plot_layout(heights=c(0.95,1.32))
   ggsave(file.path(outdir,sprintf("FIG_composite_%s.png",cond)), comp,

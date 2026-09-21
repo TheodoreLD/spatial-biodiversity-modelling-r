@@ -66,19 +66,10 @@ rel_files <- c(total="Relative_Richness_Tot.tif",
 
 # ---- resampling --------------------------------------------------------------
 # Spatial block size, in degrees
-# Spatial block size is not fixed here: it is measured per continent in section 4d,
-# by the same rule Model 1 applies globally (residual correlogram, first 150 km bin
-# below a residual spatial correlation of 0.1, converted at 111.32*cos(|lat| p90)
-# and rounded up).
 KFOLD <- 5    # folds per cross-validation assignment
 NSEED <- 10   # independent fold assignments, averaged for the point estimates
-# 250, not 100. At 100 draws a 2.5% tail holds ~2.5 of them, and the bound is effectively
-# set by the 2nd-3rd smallest draw: a direct check moved Litopterna's lower bound from
-# +0.012 to -0.006 between 100 and 250 draws, flipping whether its interval covered zero.
-# 250 gives ~6 per tail. Model 1 uses 500 for its ALE intervals.
 BB    <- 250  # block-bootstrap resamples behind every confidence interval
-# One quantile grid 
-NGRID <- 50
+NGRID <- 50   # One quantile grid 
 
 # ---- robustness (section 6) ---------------------------------------------------
 FRACS <- 0.3   # drop 30% of the mapped species per replicate
@@ -160,8 +151,7 @@ correlogram <- function(z, D){ Pp <- outer(z, z)
     if (!any(mk)) NA_real_ else mean(Pp[mk], na.rm = TRUE) }) }
 # first bin midpoint at which the correlogram drops below 0.1, as in Model 1
 cross_km <- function(v){ h <- which(v < 0.1)[1]; if (is.na(h)) max(MIDS) else MIDS[h] }
-# km -> degrees of longitude at the 90th percentile of |latitude|, rounded up; the cosine
-# matters because a degree of longitude is 85 km at 40 deg, not 111
+# km -> degrees of longitude at the 90th percentile of |latitude|, rounded up
 deg_from_km <- function(km, lat) max(5, ceiling(km / (111.32*cos(
   as.numeric(quantile(abs(lat), .90))*pi/180))))
 
@@ -221,10 +211,7 @@ Rb <- row0 %/% AGG; Cb <- col0 %/% AGG
 
 # ---- 4b. one 1-degree table per richness condition ----------------------------
 # The 0.1 deg RATIO is averaged to 1 deg, rather than the ratio being recomputed from
-# aggregated numerator and denominator. Mean-of-ratios is not ratio-of-means: it weights
-# every source cell equally, so cells with few plant species count as much as rich ones.
-# Applied consistently everywhere, including the species-drop rebuild in 6a.
-# Average to 1 degree, keep cells with at least 10% coverage, attach the continent label.
+# aggregated numerator and denominator.
 build_condition <- function(rf){
   rel <- values(rast(file.path(RELD, rf)))[,1]
   m <- is.finite(rel) & rel>0 & envfin
@@ -252,11 +239,6 @@ nsp <- length(pres)
 
 # =============================================================================
 # ---- 4d. spatial block size, measured per continent --------------------------
-# Model 1 measures the range of residual spatial autocorrelation on the global grid and
-# sizes its blocks from it. Model 2 fits continental subsets, so the same measurement is
-# made within each continent, on out-of-fold residuals of the environment-only model - the
-# baseline every clade is scored against, and the one model that does not depend on which
-# clade is being fitted. Preliminary folds use 5-degree blocks, as in Model 1.
 message("block size: residual autocorrelation per continent")
 NBLK <- 5   # fold allocations averaged for the correlogram
 .tot <- tables[["total"]]
@@ -603,11 +585,6 @@ z0 <- function(d) d |> left_join(SDR, by = c("condition","continent","clade")) |
   mutate(y = y/sd_response, y_lo = y_lo/sd_response, y_hi = y_hi/sd_response) |>
   select(-sd_response)
 
-# Intervals are plain bootstrap percentiles. No bias correction is applied: the block
-# bootstrap depresses ABSOLUTE R2, because a resample holds fewer unique blocks and so
-# less unique information, but the contribution is a DIFFERENCE and that bias cancels
-# in it (bootstrap mean +0.0405 against +0.0403 direct, over all 56 combinations).
-# Shifting an unbiased quantity would only manufacture resolution.
 CURVES <- bind_rows(
   z0(rd("model2_curves.csv"))                 |> mutate(setting="clade alone",     fit="unconstrained"),
   z0(rd("model2_curves_constrained.csv"))     |> mutate(setting="clade alone",     fit="constrained"),
@@ -736,20 +713,13 @@ fig_score <- function(cond, set){
 CONF <- bind_rows(lapply(c("unique_clade", "unique_env", "shared"), function(p)
   ENVR |> transmute(condition, continent, clade, part = p,
     est   = .data[[paste0(p, "_mono")]],
-    # Plain bootstrap percentiles, as everywhere else. These bounds used to be
-    # shifted onto the point estimate by (est - bootstrap mean), which is the
-    # recentring dropped from section 5; it survived here and inflated the
-    # environment's unique part while hiding negative shared components.
     lo    = .data[[paste0(p, "_mono_lo")]],
     hi    = .data[[paste0(p, "_mono_hi")]],
     joint = r2_cladeenv_mono)))
 write_csv(CONF, file.path(outdir, "TAB_M2_confounding.csv"))
 
 PL   <- c("unique_clade", "shared", "unique_env")
-# Deliberately not the continent palette: this panel sits beside two that colour by continent
-# in the manuscript composite, and orange/blue there would read as Americas/Africa here.
 PCOL <- c(unique_clade="#6A3D9A", shared="#8C8C8C", unique_env="#01665A")
-# "shared" throughout, matching Appendix S1.6 and the Results text.
 PLAB <- c(unique_clade="only the clade", shared="shared", unique_env="only the environment")
 fig_conf <- function(cond){
   ord <- ENVR |> filter(condition == cond) |> cf() |> keyf("shared_mono") |>
@@ -815,9 +785,6 @@ write_csv(COV, file.path(outdir, "TAB_M2_coverage.csv"))
 message(sprintf("  coverage: %d of %d combinations estimable", sum(COV$estimated), nrow(COV)))
 
 # ---- 7f-bis. the printable supplementary table -------------------------------
-# Everything the Results cite, one row per combination, intervals folded into the estimate
-# so the table fits a page. Non-estimable combinations are kept with blanks, so a reader can
-# account for all 90 rather than wondering where 34 went.
 fmt <- function(e, l, h) ifelse(is.na(e), "", sprintf("%+.3f [%+.3f, %+.3f]", e, l, h))
 r2w <- R2TAB |> select(condition, continent, clade, quantity, est, lo, hi) |>
   mutate(v = fmt(est, lo, hi)) |> select(-est, -lo, -hi) |>
@@ -842,9 +809,6 @@ SUP <- COV |>
             magnitude_SD     = magnitude,
             unique_environment = unique_env, shared) |>
   arrange(condition, continent, clade) |>
-  # a combination is missing either because the clade does not occur on that continent or
-  # because its richness resolves fewer than three distinct values; say so rather than
-  # leaving NA across eight columns
   mutate(across(where(is.character), \(z) ifelse(is.na(z), "", z)),
          status = ifelse(is.na(richness_levels), "not estimable", "estimated"))
 write_csv(SUP, file.path(outdir, "TAB_S_model2_summary.csv"))
@@ -852,10 +816,6 @@ message(sprintf("  supplementary summary: %d rows (%d estimated)",
                 nrow(SUP), sum(SUP$status == "estimated")))
 
 # ---- 7f-ter. sampling design per stratum -------------------------------------
-# Model 1 reports its grid, block size and response summary (Tab. S13-S16); this is the
-# Model 2 counterpart. The response scale is recomputed from the richness rasters using the
-# same aggregation and continent assignment as section 4, and checked against the cell counts
-# and response SDs the models actually used before it is written.
 message("sampling design per stratum")
 .ps <- load_stack(PRED, ENV, "predictor stack (environment layers)")
 .ev <- as.vector(ext(.ps)); .rs <- res(.ps); .nc <- ncol(.ps); .n <- ncell(.ps)
@@ -895,8 +855,6 @@ message(sprintf("  %d strata, cell counts and response SDs match the fitted mode
                 nrow(STRATA)))
 
 # ---- 7f-quater. the settings that fix a Model 2 result -----------------------
-# Model 1 tunes and reports the search (Tab. S15); Model 2 does not tune, so what it fixed
-# has to be stated instead.
 .ac <- read_csv(file.path(outdir, "TAB_S_model2_autocorrelation.csv"),
                 show_col_types = FALSE)
 SETTINGS <- tibble::tibble(

@@ -20,10 +20,6 @@ paths <- list(
   species_xlsx     = here('data', 'spiny_trunk_species.xlsx'),
 
   # ---- raw layers (all from Dryad; see data/README.md) -----------------------
-  # Cai et al. (2023) ensemble prediction of VASCULAR plant species richness, native grain
-  # 7,774 km2. Not woody-specific: the response is spiny-trunk species per vascular plant
-  # species, and the woody fraction of a flora varies between biomes.
-  # Written by 01 so that Model 1's ratio check can use the denominator as a predictor.
   plant_rich_rast  = here('outputs', 'biogeography', 'rasters', 'Plant_Richness.tif'),
   plant_richness   = here('data', 'raw', 'Map_global_plant_richness',
                           'sr_Ensemble_Prediction_7774_LongLat.RData'),
@@ -69,23 +65,12 @@ load_stack <- function(path, expected, description = 'raster stack') {
 }
 
 # ---- what counts as a large herbivore ---------------------------------------
-# Used by 03 (ecoregion assemblages) and 04 (clade richness stack). Defined once here so the
-# two cannot drift apart: a species must clear the mass threshold, be terrestrial, take some
-# plant matter, and belong to an order that is a large herbivore in the sense meant. The
-# three excluded orders pass the mass and diet filters without qualifying, and so does
-# the genus Homo: four hominins clear every criterion, but humans are the agent of the
-# extinctions this analysis measures rather than a source of the herbivory pressure it
-# tests. The exclusion is at genus level so that gorillas and chimpanzees, which do feed
-# on bark, remain in the pool.
 MASS_MIN_G     <- 5000
 EXCLUDE_ORDERS <- c("Carnivora", "Dasyuromorphia", "Afrosoricida")
 EXCLUDE_GENERA <- c("Homo")
-# Binomial.1.2 is "Genus_species", so the genus is everything before the underscore.
 genus_of <- function(binomial) sub("_.*", "", binomial)
 
 # ---- reproject a raster onto a template, without inventing values ------------
-# Bilinear projection can overshoot at edges, so anything outside the source range is
-# dropped. Used by 04 (predictor stack) and 05 (ratio check).
 align_to_template <- function(x, template, method = "bilinear") {
   out <- terra::project(x, template, method = method)
   if (method != "near") {

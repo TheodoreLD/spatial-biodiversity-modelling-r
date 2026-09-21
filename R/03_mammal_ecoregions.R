@@ -3,8 +3,6 @@
 # Present-natural large-herbivore species list for the richest ecoregion of each modelled
 # continental region.
 #
-# Two ecoregions are reported for a continent whose richest one is too thinly replicated for
-# 02 to attach a confidence interval to it (fewer than MIN_EFF_CI effective blocks).
 #
 # LAYOUT
 #   1  settings          megafauna definition and which ranking file is read

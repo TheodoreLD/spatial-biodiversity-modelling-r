@@ -47,13 +47,11 @@ message("sections requested: ", paste(.M1_RUN, collapse = ", "))
 # ---- analysis unit: aggregate 0.1 deg -> 1 deg (AGG = 10) ----
 # Chosen by the resolution sweep (resolution_sweep.csv)
 AGG <- as.integer(Sys.getenv("MODEL1_AGG", unset = "10"))
-# 10% coverage: a degree cell is kept only if at least 10 of its 100 source cells
-# carry data. Used by the species-drop rebuild.
+# 10% coverage
 MINSUB_M1 <- max(1, floor(0.10*AGG*AGG))
 
 # ---- repetition counts ----
-# Every estimate that depends on a random draw is averaged over several of them, so these
-# are the runtime levers.
+# Every estimate that depends on a random draw is averaged over several of them
 NBLK  <- as.integer(Sys.getenv("M1_BLOCK_REPS", unset = "5"))    # correlogram: allocations x subsamples
 NCV   <- as.integer(Sys.getenv("M1_CV_REPS",    unset = "10"))   # performance: fold allocations
 NSEED <- as.integer(Sys.getenv("M1_CV_SEEDS",   unset = "5"))    # resolution + transform: allocations
@@ -226,8 +224,7 @@ b5 <- blk(df$longitude, df$latitude, 5)
 NSUB <- min(2500, nrow(df))
 bins <- seq(0,3000,150); mids <- (bins[-1]+bins[-length(bins)])/2 # define the distance classes
 
-# calculate resiudal spatial autocorrelation (Moran-like): compare the model residuals of cells sperated
-# by a given distance. Do resiudals within bin tend to be sililar?
+# calculate resiudal spatial autocorrelation (Moran-like)
 correlogram <- function(z, D, bins){
   P <- outer(z, z)
   sapply(seq_len(length(bins)-1), function(k){
@@ -520,15 +517,7 @@ transform <- bind_rows(trows); write_csv(transform, file.path(outdir,"transform_
 # =============================================================================
 # 8b. RATIO CHECK: is the environmental signal an artefact of the denominator?
 # =============================================================================
-# The reported response divides spiny-trunk richness by vascular plant richness. Plant
-# richness peaks in the wet tropics, so the ratio is mechanically inflated where plant
-# richness is low - open, drier, shorter vegetation. The productivity and height curves in
-# Fig. 4 have exactly that shape, so they have to be shown not to be a division artefact.
-#
-# Here the ratio is dissolved: the response is ABSOLUTE spiny-trunk richness and plant
-# richness enters as a seventh predictor. Same cells, same blocks, same hyperparameters, so
-# only the response and the predictor set differ. A curve that keeps its shape was not
-# produced by the denominator.
+
 if (run_sec("ratio")) local({
   message("8b. RATIO CHECK (absolute response, plant richness as a predictor)")
   st <- load_stack(STACK, c(TARGET, PREDS), "predictor stack")
@@ -537,14 +526,10 @@ if (run_sec("ratio")) local({
   pl <- align_to_template(
     rast(require_file(paths$plant_rich_rast,
                       "gridded vascular plant richness (written by 01)")), st[[1]])
-  # Averaged over the same source cells as the response: df is built with na.rm = TRUE,
-  # so it drops every 0.1 deg cell without a relative-richness value, and the two extra
-  # layers must drop them too or they would describe a different set of cells from the
-  # six predictors they sit beside.
+  # Averaged over the same source cells as the response
   e0 <- as.data.frame(c(st, ab, pl), xy = TRUE, na.rm = FALSE)
   names(e0)[(ncol(e0)-1):ncol(e0)] <- c("abs_richness", "plant_richness")
-  # df keeps a 0.1 deg cell only where every stack layer is finite; the extras have to
-  # be averaged over that same set or they describe different cells from their neighbours
+  # df keeps a 0.1 deg cell only where every stack layer is finite
   e0 <- e0[stats::complete.cases(e0[, c(TARGET, PREDS)]), ]
   extra <- e0 |>
     mutate(R = floor((90 - y)/(0.1*AGG)), C = floor((x + 180)/(0.1*AGG))) |>

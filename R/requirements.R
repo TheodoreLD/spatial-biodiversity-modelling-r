@@ -3,8 +3,6 @@ required_packages <- c(
   "here", "terra", "sf", "dplyr", "tidyr", "purrr", "readr", "stringr",
   "ggplot2", "patchwork", "scales", "tibble",
   "readxl", "TNRS",
-  # No library() call names these two: the mammal-consumption RDS stores a raster-package
-  # RasterLayer, so readRDS needs the S4 class defined before terra::rast() can coerce it.
   "raster", "sp"
 )
 
