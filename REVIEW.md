@@ -50,7 +50,9 @@ not an independent rerun or scientific validation of the models.
    documented, but there is no dependency lockfile. `R/requirements.R` installs missing
    packages without enforcing those versions.
 5. **Complete publication metadata when available.** The citation currently refers to
-   a submitted article without a full bibliographic entry or article DOI.
+   an accepted article in Global Ecology and Biogeography without a full bibliographic
+   entry or article DOI. The author confirmed the article licence as CC BY-NC-ND 4.0;
+   the README distinguishes it from the existing MIT licence for the software.
 
 ## Validation limits
 
