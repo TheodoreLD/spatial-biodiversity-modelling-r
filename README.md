@@ -7,6 +7,58 @@ regression trees (**CatBoost**) under spatial cross-validation.
 
 Everything — data preparation, models and figures — runs in R.
 
+
+**74 mapped species · 1° analysis grid · spatial cross-validation · R / CatBoost**
+
+[Main figures](#main-figures) · [Pipeline](#pipeline-r) · [Reproducing](#reproducing) ·
+[Output index](outputs/README.md) · [Environment](ENVIRONMENT.md) · [Repository review](REVIEW.md)
+
+## Main figures
+
+The figures below are the committed analysis outputs. Click an image to inspect the
+full-size figure. Separate prickly and thorny results are linked in the
+[output index](outputs/README.md).
+
+### Global distribution, biomes and ecoregions
+
+[![Global relative richness of spiny-trunk trees, biome distributions and the top 25 ecoregions](outputs/descriptive/FIG_composite_total.png)](outputs/descriptive/FIG_composite_total.png)
+
+**Total condition (74 mapped species).** The map shows relative richness at 1°.
+Biome distributions and ecoregion summaries describe its geographic pattern;
+ecoregion intervals use spatial block bootstrapping. Open points have no reportable
+interval because fewer than three effective blocks are available.
+[Source summaries](outputs/descriptive/) · [Script](R/02_descriptive.R)
+
+### Environmental associations — Model 1
+
+[![Model 1 accumulated local effects for six predictors with pointwise spatial block-bootstrap intervals](outputs/model1/M1_ALE.png)](outputs/model1/M1_ALE.png)
+
+Accumulated local effects (ALE) describe fitted response shapes among occupied cells.
+Shading is a 95% **pointwise** block-bootstrap percentile interval; the line is the
+full-data fit. These curves are not a predictor-importance ranking or a causal test.
+Pooled out-of-fold R² is **0.372** (SD **0.019** across 10 spatial fold allocations).
+[Performance table](outputs/model1/performance_summary.csv) ·
+[ALE values](outputs/model1/ale_curves.csv) · [Script](R/05_model1.R)
+
+### Mammal-clade associations — Model 2
+
+[![Model 2 total-condition composite showing clade contributions, explained-variance partitions and unconstrained response shapes across continents](outputs/model2/FIG_M2_composite.png)](outputs/model2/FIG_M2_composite.png)
+
+**Total condition.** The panels bring together response magnitude, the cross-validated
+R² partition, and unconstrained response shapes across the Americas, Africa and Asia.
+Across all three conditions, 56 of 90 screened combinations are estimable; only
+**3 of 56** clade-increment intervals exclude zero. Positive constrained response
+magnitudes alone are not evidence of an association.
+[Coverage](outputs/model2/TAB_M2_coverage.csv) ·
+[Clade and environment results](outputs/model2/model2_env_results.csv) ·
+[Script](R/06_model2.R)
+
+> **Interpretation:** models describe variation in relative richness where spiny-trunk
+> species occur. Spatial dependence, correlated predictors and uncertainty remain
+> important; see [method notes](#method-notes) and the diagnostic figures in the
+> [output index](outputs/README.md).
+
+
 ---
 
 ## Pipeline (`R/`)
@@ -24,7 +76,7 @@ on the richness layers and the ecoregion ranking it produces.
 | 5 | `05_model1.R` | **Model 1** — environmental characterisation via **ALE**, plus design checks (resolution, transform, ratio) and species-drop robustness; sections selectable with `M1_RUN` | `outputs/model1/` |
 | 6 | `06_model2.R` | **Model 2** — mammal-clade associations, each clade fitted **alone and with** four environmental covariates, and **unconstrained and monotone-constrained**: response magnitude, the cross-validated R² partition with bootstrap intervals, response shapes, and a species-drop check | `outputs/model2/` |
 
-`05_model1.R` runs in eleven sections: inputs and collinearity, block size, tuning, block
+`05_model1.R` has sections 0–10, plus a ratio-check subsection: inputs and collinearity, block size, tuning, block
 re-check, performance, residual diagnostics, the block-bootstrap ALE ensemble, resolution,
 transform, ratio check, species-drop, figures.
 
@@ -78,8 +130,8 @@ plant diversity.
   produce the reported R², so the estimate is post-selection; with a grid this flat the effect
   is small.
 
-- **Model 2 fits each clade independently**, so clade–clade correlation is not a confounder,
-  and fits every clade twice — alone, and with the four environmental covariates. Its learner
+- **Model 2 fits each clade separately**; these fits do not isolate independent effects
+  among correlated clades. It fits every clade twice — alone, and with the four environmental covariates. Its learner
   is fixed a priori (depth 4, L2 10, 300 iterations, no subsampling) so that scores stay
   comparable across clades rather than reflecting differences in tuned capacity.
 
@@ -128,7 +180,32 @@ plant diversity.
 4. **Run** `run_pipeline.R`, or the `R/` scripts in order. Steps are not independent: 03 reads
    the ecoregion ranking 02 writes, and 05/06 read the stacks 04 writes.
 
-Run from the project root, or with the RStudio project open, so `here()` resolves. Country
+Run from the repository root so `here()` resolves. For example, in an R session:
+
+```r
+source("R/requirements.R")
+# Install the matching CatBoost binary as described above, then provision the data.
+source("run_pipeline.R")
+```
+
+**To reproduce the recorded numbers:** use the archived predictor and clade stacks,
+the required richness layers and species ranges, and the versions in
+[ENVIRONMENT.md](ENVIRONMENT.md). Run the modelling scripts directly:
+
+```r
+source("R/05_model1.R")
+source("R/06_model2.R")
+```
+
+Running the full pipeline rebuilds the stacks. Step 4 has a documented `terra`
+NA-boundary instability, so a rebuild can change the analysis cells and numerical
+results. Preserve a separate copy of the archived stacks before rebuilding.
+Model 1 defaults to all sensitivity analyses; reduced `M1_RUN` selections are
+development runs and do not regenerate the complete result set.
+
+Step 0 needs internet access for TNRS and is not read by the spatial analyses;
+for an offline analysis, run scripts 01–06 in order after provisioning their inputs.
+ Country
 borders for the maps are in `data/assets/world_borders.geojson`. Committed outputs are figures
 (`.png`) and summary tables (`.csv`); rasters and the per-cell `predictor_table.csv` are
 regenerated by 01 and 04 or taken from Dryad.
@@ -139,27 +216,27 @@ Recorded so the manuscript and the archive cannot drift apart.
 
 | quantity | value | source |
 |---|---|---|
-| Model 1 pooled out-of-fold R² | **0.372** (SD 0.019 over 10 fold allocations, range 0.338–0.395) | `model1/performance_summary.csv` |
+| Model 1 pooled out-of-fold R² | **0.372** (SD 0.019 over 10 fold allocations, range 0.338–0.395) | [model1/performance_summary.csv](outputs/model1/performance_summary.csv) |
 | — training R² / overfit gap | 0.565 / 0.193 | same |
 | — RMSE | 0.00148 | same |
 | — mean of per-fold R² (weaker statistic) | 0.324 (SD 0.155); fold 2.5–97.5% −0.084 to 0.561 | same |
-| Model 1 calibration slope | 0.999 (SD 0.086 over 10 allocations, range 0.898–1.173) | `model1/calibration.csv` |
-| Analysis unit | 1° → 4,806 cells, from 398,474 at 0.1° | `model1/resolution_sweep.csv` |
+| Model 1 calibration slope | 0.999 (SD 0.086 over 10 allocations, range 0.898–1.173) | [model1/calibration.csv](outputs/model1/calibration.csv) |
+| Analysis unit | 1° → 4,806 cells, from 398,474 at 0.1° | [model1/resolution_sweep.csv](outputs/model1/resolution_sweep.csv) |
 | Resolution sweep | 0.294 (0.1°) · 0.323 (0.5°) · 0.366 (1°) · 0.370 (2°) | same |
-| Model 1 block size | **8°**, from a 675 km residual range; re-deriving with the tuned hyperparameters gives the same | `model1/blocksize_recheck.csv` |
-| Residual Moran's I at 75 km | 0.743 (SD 0.029 over 10 allocations × 5 subsamples); below 0.1 from the 825 km bin | `model1/residual_correlogram.csv` |
-| Predictor entanglement | concurvity 0.67–0.85; maximum VIF 4.83 | `model1/predictor_concurvity.csv` |
-| Model 1 tuning | 12 configurations, all within 1 SE; 1-SE pick depth 3, L2 30 | `model1/tuning_grid.csv` |
-| Model 1 species-drop (30% removed) | 0.350 ± 0.081 over 300 replicates, against 0.392 for the full pool (52 of 74 species kept) | `model1/jackknife.csv` |
-| Model 2 cells per continent | Americas 2,062 · Africa 1,414 · Asia 1,129 | `model2/TAB_S_model2_strata.csv` |
-| Model 2 block sizes | 12° / 7° / 8° from 975 / 675 / 675 km; 34 / 46 / 48 blocks | `model2/TAB_S_model2_autocorrelation.csv` |
-| Model 2 settings | depth 4, L2 10, 300 iterations, no subsampling; 5 folds × 10 allocations; 250 block-bootstrap resamples | `model2/TAB_S_model2_settings.csv` |
-| Model 2 coverage | 56 of 90 clade × continent × condition combinations estimable | `model2/TAB_M2_coverage.csv` |
-| Model 2 contributions excluding zero | 3 of 56; shared component negative in 44 of 56 | `model2/model2_env_results.csv` |
-| Model 2 species-drop | 30% of species removed, 90 replicates, total condition only | `model2/TAB_M2_jackknife.csv` |
-| Descriptive block bootstrap | 2°, from a 175 km within-ecoregion range; 2,000 resamples per ecoregion | `descriptive/within_ecoregion_correlogram_summary.csv` |
-| Ecoregions keeping an interval | 302 of 462; the rest hold fewer than 3 effective 2° blocks | `descriptive/ecoregion_summary_total.csv` |
-| Richest ecoregion per continent | Beni savanna (4.9 effective blocks) · Cross-Niger transition forests (1.4, **no interval** — Sudd flooded grasslands, 6.1, reported alongside) · Tonle Sap freshwater swamp forests (3.7) | `ecoregion_mammal/ecoregion_mammals.csv` |
+| Model 1 block size | **8°**, from a 675 km residual range; re-deriving with the tuned hyperparameters gives the same | [model1/blocksize_recheck.csv](outputs/model1/blocksize_recheck.csv) |
+| Residual Moran's I at 75 km | 0.743 (SD 0.029 over 10 allocations × 5 subsamples); below 0.1 from the 825 km bin | [model1/residual_correlogram.csv](outputs/model1/residual_correlogram.csv) |
+| Predictor entanglement | concurvity 0.67–0.85; maximum VIF 4.83 | [model1/predictor_concurvity.csv](outputs/model1/predictor_concurvity.csv) |
+| Model 1 tuning | 12 configurations, all within 1 SE; 1-SE pick depth 3, L2 30 | [model1/tuning_grid.csv](outputs/model1/tuning_grid.csv) |
+| Model 1 species-drop (30% removed) | 0.350 ± 0.081 over 300 replicates, against 0.392 for the full pool (52 of 74 species kept) | [model1/jackknife.csv](outputs/model1/jackknife.csv) |
+| Model 2 cells per continent | Americas 2,062 · Africa 1,414 · Asia 1,129 | [model2/TAB_S_model2_strata.csv](outputs/model2/TAB_S_model2_strata.csv) |
+| Model 2 block sizes | 12° / 7° / 8° from 975 / 675 / 675 km; 34 / 46 / 48 blocks | [model2/TAB_S_model2_autocorrelation.csv](outputs/model2/TAB_S_model2_autocorrelation.csv) |
+| Model 2 settings | depth 4, L2 10, 300 iterations, no subsampling; 5 folds × 10 allocations; 250 block-bootstrap resamples | [model2/TAB_S_model2_settings.csv](outputs/model2/TAB_S_model2_settings.csv) |
+| Model 2 coverage | 56 of 90 clade × continent × condition combinations estimable | [model2/TAB_M2_coverage.csv](outputs/model2/TAB_M2_coverage.csv) |
+| Model 2 contributions excluding zero | 3 of 56; shared component negative in 44 of 56 | [model2/model2_env_results.csv](outputs/model2/model2_env_results.csv) |
+| Model 2 species-drop | 30% of species removed, 90 replicates, total condition only | [model2/TAB_M2_jackknife.csv](outputs/model2/TAB_M2_jackknife.csv) |
+| Descriptive block bootstrap | 2°, from a 175 km within-ecoregion range; 2,000 resamples per ecoregion | [descriptive/within_ecoregion_correlogram_summary.csv](outputs/descriptive/within_ecoregion_correlogram_summary.csv) |
+| Ecoregions keeping an interval | 302 of 462; the rest hold fewer than 3 effective 2° blocks | [descriptive/ecoregion_summary_total.csv](outputs/descriptive/ecoregion_summary_total.csv) |
+| Richest ecoregion per continent | Beni savanna (4.9 effective blocks) · Cross-Niger transition forests (1.4, **no interval** — Sudd flooded grasslands, 6.1, reported alongside) · Tonle Sap freshwater swamp forests (3.7) | [ecoregion_mammal/ecoregion_mammals.csv](outputs/ecoregion_mammal/ecoregion_mammals.csv) |
 | — megafauna species in each | Beni 40 · Cross-Niger 16 · Sudd 33 · Tonle Sap 18 | same |
 
 Prefer **pooled out-of-fold R²** to the mean of per-fold R². Per-fold R² divides by each

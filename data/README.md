@@ -32,7 +32,7 @@ default entries in `R/config.R`:
 | `outputs/raster_model/predictor_stack.tif` | model-ready predictor + response stack, rebuilt by `04_data_preparation.R` | this study |
 | `outputs/raster_model/Clade_richness_stack.tif` | per-clade present-natural richness, rebuilt by `04_data_preparation.R` | this study |
 
-The two `outputs/` entries are conveniences — `01_biogeography.R` and
+The three `outputs/` entries are conveniences — `01_biogeography.R` and
 `04_data_preparation.R` regenerate them from the raw layers.
 
 ## Pointing the scripts at the data
