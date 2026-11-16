@@ -245,5 +245,23 @@ is low. The fold spread is largely a denominator artefact rather than regional m
 
 ## Citation and licence
 
-Cite the associated article (submitted, *Global Ecology and Biogeography*). Data: Dryad, DOI
-in `data/README.md`. Code is released under the MIT Licence (`LICENSE`).
+The associated article has been **accepted in Global Ecology and Biogeography**.
+The author has confirmed **Creative Commons Attribution–NonCommercial–NoDerivatives
+4.0 International (CC BY-NC-ND 4.0)** as the article's publication licence.
+The full bibliographic citation and article DOI will be added when available.
+
+Licensing is specific to the material:
+
+- **Source code and software documentation:** the existing [MIT Licence](LICENSE)
+  applies to the R scripts and their software documentation.
+- **Article and article figures:** consult the article's
+  [CC BY-NC-ND 4.0 licence](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+  and any figure-specific credit lines. That licence permits sharing with attribution
+  for non-commercial purposes; it does not permit distributing adapted material.
+  The software's MIT licence does not replace the article's publication terms.
+- **Data and other outputs:** see the [data guide](data/README.md), the Dryad
+  deposit's licence and the terms of the original data providers. The article
+  licence is not automatically a licence for every dataset or generated output
+  in this repository.
+
+Please cite the article and the relevant data archive when using this work.
